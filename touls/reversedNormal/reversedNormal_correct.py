@@ -3,6 +3,7 @@
 reversedNormal_correct.py
 選択オブジェクトの反転フェースを検出し polyNormal(normalMode=0) でフリップする。
 """
+import collections
 import maya.cmds as cmds
 
 MAX_FACES_PER_MESH = 50000
@@ -36,11 +37,16 @@ def _find_reversed_faces(shape):
     if n_faces == 0 or n_faces > MAX_FACES_PER_MESH:
         return []
 
-    edge_map = {}
+    # 全フェースの頂点インデックスを一括取得（per-face API 呼び出しを回避）
+    face_counts, face_connects = fn.getVertices()
     face_verts_list = []
-    for fi in range(n_faces):
-        verts = list(fn.getPolygonVertices(fi))
-        face_verts_list.append(verts)
+    offset = 0
+    for cnt in face_counts:
+        face_verts_list.append(list(face_connects[offset:offset + cnt]))
+        offset += cnt
+
+    edge_map = {}
+    for fi, verts in enumerate(face_verts_list):
         n = len(verts)
         for j in range(n):
             edge_map[(verts[j], verts[(j + 1) % n])] = fi
@@ -54,9 +60,10 @@ def _find_reversed_faces(shape):
         consistent = {start_fi}
         reversed_set = set()
         visited = {start_fi}
-        queue = [start_fi]
+        # deque を使い popleft() を O(1) に
+        queue = collections.deque([start_fi])
         while queue:
-            fi = queue.pop(0)
+            fi = queue.popleft()
             verts = face_verts_list[fi]
             fi_c = fi in consistent
             n = len(verts)

@@ -322,6 +322,7 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
 
         # 右パネル
         self.object_to_details = {}
+        self._last_check_results = {}  # folder -> obj_to_details（FIX 前の自動選択に使用）
 
         # フォルダ一覧
         self.folders = []
@@ -673,22 +674,44 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
             obj_to_details = self.normalize_structured(structured)
             has_issue = bool(obj_to_details)
             count = len(obj_to_details)
-            if show_details:
-                self.set_object_results(obj_to_details)
         else:
             has_issue = bool(text.strip())
             count = 1 if has_issue else 0
-            if show_details:
-                self.set_object_results({"stdout": [text]} if has_issue else {})
+            obj_to_details = {"stdout": [text]} if has_issue else {}
+
+        # FIX 前の自動選択に使うため常にキャッシュ
+        self._last_check_results[folder] = obj_to_details
+
+        if show_details:
+            self.set_object_results(obj_to_details)
 
         self._set_folder_state(folder, _S_ERROR if has_issue else _S_OK, count)
         self._update_status_bar()
         return has_issue
 
     # ----------------------------------------------------------
+    # FIX 前の自動選択
+    # ----------------------------------------------------------
+    def _select_check_results(self, folder):
+        """直近のチェック結果に含まれるオブジェクトを Maya で選択する"""
+        if not cmds:
+            return
+        obj_to_details = self._last_check_results.get(folder, {})
+        targets = [
+            k for k in obj_to_details
+            if k not in self._SKIP_SELECT_KEYS and cmds.objExists(k)
+        ]
+        if targets:
+            try:
+                cmds.select(targets, r=True)
+            except Exception:
+                pass
+
+    # ----------------------------------------------------------
     # FIX 実行
     # ----------------------------------------------------------
     def _run_fix(self, path, folder):
+        self._select_check_results(folder)  # チェック結果オブジェクトを事前に Maya 選択
         structured, text = run_py_get_structured_or_text(path)
         if structured is not None:
             self.set_object_results(self.normalize_structured(structured))
@@ -757,6 +780,7 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
         folder = self._all_fix_queue[self._all_fix_index]
         self._all_fix_index += 1
         fix_path = os.path.join(TARGET_DIR, folder, f"{folder}_correct.py")
+        self._select_check_results(folder)  # チェック結果オブジェクトを事前に Maya 選択
         run_py_get_structured_or_text(fix_path)
         self.run_check(folder, show_details=False)
         QtWidgets.QApplication.processEvents()

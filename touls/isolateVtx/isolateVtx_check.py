@@ -72,21 +72,13 @@ def get_results():
 
         try:
             dag = _get_dag_path(shape)
-            it = om2.MItMeshVertex(dag)
+            fn = om2.MFnMesh(dag)
+            # フェースに属する全頂点インデックスを一括取得し、接続済み頂点の set を構築
+            _, face_connects = fn.getVertices()
+            connected = set(face_connects)
+            isolated = [i for i in range(fn.numVertices) if i not in connected]
         except Exception:
             continue
-
-        isolated = []
-        while not it.isDone():
-            try:
-                edges = it.getConnectedEdges()  # list[int]
-            except Exception:
-                edges = None
-
-            if not edges:  # None / [] -> edge 0本
-                isolated.append(it.index())
-
-            it.next()
 
         if not isolated:
             continue

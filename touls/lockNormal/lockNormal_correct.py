@@ -1,14 +1,16 @@
 # lockNormal_correct.py
 # 選択中オブジェクトの mesh に対して
-# 「ロックされている法線（freeze normals / locked normals）」を解除し、
-# UI（checkList）向けに get_results() で構造化結果を返す
+# 「ロックされている法線（freeze normals / locked normals）」を解除する。
+# OpenMaya API を優先し、失敗時は cmds フォールバック。
 
 import maya.cmds as cmds
 
+try:
+    import maya.api.OpenMaya as om2
+except Exception:
+    om2 = None
 
-# ------------------------------------------------------------
-# Utilities
-# ------------------------------------------------------------
+
 def _to_transforms(selection):
     """shape が選ばれても transform に正規化（重複除去・順序維持）"""
     transforms = []
@@ -20,7 +22,6 @@ def _to_transforms(selection):
         else:
             parents = cmds.listRelatives(n, parent=True, fullPath=True) or []
             transforms.extend([p for p in parents if cmds.nodeType(p) == "transform"])
-
     seen = set()
     uniq = []
     for t in transforms:
@@ -40,125 +41,75 @@ def _iter_mesh_shapes(transform):
     ]
 
 
-def _locked_count(mesh_shape):
-    """
-    返り値: (locked_count:int, err:str|None)
-    lockNormal_check.py と同じく freezeNormal query で数える
-    """
+def _has_locked_normals(shape):
+    """ロック法線が存在するか。API 優先 → cmds フォールバック"""
+    if om2:
+        try:
+            sel = om2.MSelectionList()
+            sel.add(shape)
+            fn = om2.MFnMesh(sel.getDagPath(0))
+            for i in range(fn.numNormals):
+                if fn.isNormalLocked(i):
+                    return True
+            return False
+        except Exception:
+            pass
+    # cmds フォールバック
     try:
-        vals = cmds.polyNormalPerVertex(mesh_shape + ".vtx[*]", q=True, freezeNormal=True)
-        if not vals:
-            return 0, None
-
-        locked = 0
-        for v in vals:
-            try:
-                if bool(v):
-                    locked += 1
-            except Exception:
-                pass
-
-        return locked, None
-    except Exception as e:
-        return 0, str(e)
+        vals = cmds.polyNormalPerVertex(shape + ".vtx[*]", q=True, freezeNormal=True) or []
+        return any(bool(v) for v in vals)
+    except Exception:
+        return False
 
 
-def _unfreeze(mesh_shape):
-    """返り値: err:str|None"""
+def _unfreeze_normals(shape):
+    """法線ロック解除: API 優先 → cmds フォールバック。エラー文字列 or None を返す"""
+    if om2:
+        try:
+            sel = om2.MSelectionList()
+            sel.add(shape)
+            fn = om2.MFnMesh(sel.getDagPath(0))
+            fn.unlockVertexNormals(om2.MIntArray(range(fn.numVertices)))
+            return None
+        except Exception:
+            pass
     try:
-        cmds.polyNormalPerVertex(mesh_shape + ".vtx[*]", unFreezeNormal=True)
+        cmds.polyNormalPerVertex(shape + ".vtx[*]", unFreezeNormal=True)
         return None
     except Exception as e:
         return str(e)
 
 
-# ------------------------------------------------------------
-# Entry points
-# ------------------------------------------------------------
 def get_results():
-    """
-    UI（checkList）から呼ばれる想定。
-    解除を実行し、list[dict] を返す。
-    - transform: グルーピング用
-    - message: 右側詳細用
-    """
     sel = cmds.ls(sl=True, long=True) or []
     transforms = _to_transforms(sel)
-
     if not transforms:
         return []
 
     results = []
-    total_unfrozen = 0
-    touched = 0
-
     for tr in transforms:
-        shapes = _iter_mesh_shapes(tr)
-        for shape in shapes:
-            before, err = _locked_count(shape)
+        for shape in _iter_mesh_shapes(tr):
+            if not _has_locked_normals(shape):
+                continue
+            err = _unfreeze_normals(shape)
             if err:
                 results.append({
                     "transform": tr,
-                    "shape": shape,
-                    "unfrozen_count": 0,
-                    "message": f"[ERROR] {shape} : ロック状態の取得に失敗しました ({err})"
-                })
-                continue
-
-            if before <= 0:
-                continue  # ロックなしは表示しない（“解除した shape / 件数”に絞る）
-
-            touched += 1
-
-            err2 = _unfreeze(shape)
-            if err2:
-                results.append({
-                    "transform": tr,
-                    "shape": shape,
-                    "unfrozen_count": 0,
-                    "message": f"[ERROR] {shape} : 解除処理に失敗しました ({err2})"
-                })
-                continue
-
-            after, err3 = _locked_count(shape)
-            if err3:
-                # 再確認できない場合は「解除を実行した」ことだけ返す
-                total_unfrozen += before
-                results.append({
-                    "transform": tr,
-                    "shape": shape,
-                    "unfrozen_count": before,
-                    "message": f"{shape} : ロック解除を実行（解除前 {before} / 解除後の再確認は失敗）"
-                })
-                continue
-
-            unfrozen = max(0, before - after)
-            total_unfrozen += unfrozen
-
-            if after == 0:
-                results.append({
-                    "transform": tr,
-                    "shape": shape,
-                    "unfrozen_count": unfrozen,
-                    "message": f"{shape} : ロック解除 {unfrozen}（解除前 {before}）"
+                    "message": f"[ERROR] {shape}: ロック解除に失敗 ({err})",
                 })
             else:
                 results.append({
                     "transform": tr,
-                    "shape": shape,
-                    "unfrozen_count": unfrozen,
-                    "message": f"{shape} : 部分的に解除 {unfrozen}（解除前 {before} → 解除後 {after}）"
+                    "message": f"{shape}: ロック解除を実行",
                 })
-
     return results
 
 
 def correct():
-    """互換用：従来の correct() でも動くようにしておく"""
+    """互換用"""
     return get_results()
 
 
 if __name__ == "__main__":
-    # Script Editor から直接実行した場合はメッセージを出す
     for r in get_results():
         print(r.get("message", ""))
