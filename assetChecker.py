@@ -25,7 +25,7 @@ def maya_main_window():
 # ============================================================
 # 設定
 # ============================================================
-TARGET_DIR          = r"D:\personal use\3D Object\project\VRC_ANKO\scripts\assetChecker\touls"
+TARGET_DIR          = os.path.join(os.path.dirname(os.path.abspath(__file__)), "touls")
 WINDOW_OBJECT_NAME  = "assetChecker"
 LEFT_W = 168   # 左パネル（チェックボタン列）の幅
 BTN_H  = 26    # チェックボタンの高さ

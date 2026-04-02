@@ -13,7 +13,9 @@
       "Bash(mv \"$BASE/vtxTweak/vtx_correct.py\" \"$BASE/vtxTweak/vtxTweak_correct.py\")",
       "Read(//d/personal use/3D Object/project/VRC_ANKO/scripts/assetChecker/$BASE/**)",
       "Bash(do echo:*)",
-      "Read(//d/personal use/3D Object/project/VRC_ANKO/scripts/assetChecker/**)"
+      "Read(//d/personal use/3D Object/project/VRC_ANKO/scripts/assetChecker/**)",
+      "Bash(python3:*)",
+      "Bash(python:*)"
     ]
   }
 }
