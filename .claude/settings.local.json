@@ -1,19 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ls \"D:/personal use/3D Object/project/VRC_ANKO/scripts/assetChecker/touls/uv\\(0.0-1.0\\)\")",
-      "Bash(grep -v \"^_old$\")",
       "Bash(done)",
-      "Bash(BASE=\"D:/personal use/3D Object/project/VRC_ANKO/scripts/assetChecker/touls\")",
-      "Bash(for d:*)",
       "Bash(do)",
       "Bash(mkdir -p \"$BASE/$d\")",
       "Bash(mv \"$BASE/vtx\" \"$BASE/vtxTweak\")",
       "Bash(mv \"$BASE/vtxTweak/vtx_check.py\" \"$BASE/vtxTweak/vtxTweak_check.py\")",
       "Bash(mv \"$BASE/vtxTweak/vtx_correct.py\" \"$BASE/vtxTweak/vtxTweak_correct.py\")",
-      "Read(//d/personal use/3D Object/project/VRC_ANKO/scripts/assetChecker/$BASE/**)",
       "Bash(do echo:*)",
-      "Read(//d/personal use/3D Object/project/VRC_ANKO/scripts/assetChecker/**)",
       "Bash(python3:*)",
       "Bash(python:*)"
     ]
