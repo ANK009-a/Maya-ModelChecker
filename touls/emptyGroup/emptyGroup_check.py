@@ -1,0 +1,60 @@
+# -*- coding: utf-8 -*-
+"""
+emptyGroup_check.py
+子ノードを持たない transform（空グループ）を検出する。
+接続がある場合は削除に注意が必要なため、その旨を詳細に表示する。
+"""
+import maya.cmds as cmds
+
+DEFAULT_NODES = frozenset(["persp", "top", "front", "side", "left"])
+
+
+def _short_name(dag_path):
+    return dag_path.rsplit("|", 1)[-1] if "|" in dag_path else dag_path
+
+
+def get_results():
+    results = []
+    transforms = cmds.ls(type="transform", long=True) or []
+
+    for tr in transforms:
+        if not cmds.objExists(tr):
+            continue
+        short = _short_name(tr)
+        if short in DEFAULT_NODES:
+            continue
+
+        # シェイプを持つノードは空グループではない
+        shapes = cmds.listRelatives(tr, shapes=True, fullPath=True) or []
+        if shapes:
+            continue
+
+        # 子ノードがなければ空グループ
+        children = cmds.listRelatives(tr, children=True, fullPath=True) or []
+        if children:
+            continue
+
+        incoming = cmds.listConnections(tr, s=True, d=False) or []
+        outgoing = cmds.listConnections(tr, s=False, d=True) or []
+
+        details = [f"フルパス: {tr}"]
+        if incoming or outgoing:
+            details.append(
+                f"⚠ 接続あり (in={len(incoming)}, out={len(outgoing)}) — 削除前に確認してください"
+            )
+
+        results.append({
+            "transform": short,
+            "message": f"空グループ: {short}",
+            "details": details,
+        })
+    return results
+
+
+if __name__ == "__main__":
+    res = get_results()
+    if not res:
+        print("[emptyGroup] 空グループは見つかりませんでした。")
+    else:
+        for r in res:
+            print(r["message"])
