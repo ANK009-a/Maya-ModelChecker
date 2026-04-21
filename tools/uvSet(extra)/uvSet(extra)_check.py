@@ -28,10 +28,22 @@ from _util import (
 REQUIRED_UVSET = "map1"
 
 # 接続検出ができないが正常運用とみなす UVSet 名（Pencil+ 等のプラグイン）
-WHITELIST_UVSETS = frozenset([
+# - WHITELIST_EXACT    : 完全一致
+# - WHITELIST_PREFIXES : プレフィックス一致（Pencil+ が動的に生成する番号付き名に対応）
+#   例: PencilSelectedEdge14UVSet1 / PencilSelectedEdge49UVSet2 など
+WHITELIST_EXACT = frozenset([
     "Pencil",
-    "PencilSelectedEdge",
 ])
+WHITELIST_PREFIXES = (
+    "PencilSelectedEdge",
+)
+
+
+def _is_whitelisted_uvset(name: str) -> bool:
+    """UVSet 名がホワイトリスト（完全一致 or プレフィックス）に該当するか。"""
+    if name in WHITELIST_EXACT:
+        return True
+    return name.startswith(WHITELIST_PREFIXES)
 
 
 # ----------------------------------------------------------------------
@@ -97,7 +109,7 @@ def get_results() -> list[dict]:
         # ホワイトリスト（Pencil+ 等）と map1 は判定対象外
         extra = [
             u for u in uv_sets
-            if u != REQUIRED_UVSET and u not in WHITELIST_UVSETS
+            if u != REQUIRED_UVSET and not _is_whitelisted_uvset(u)
         ]
 
         # map1 あり ＆ 判定対象 extra が 0 → 問題なし
@@ -131,7 +143,7 @@ def get_results() -> list[dict]:
         for name in uv_sets:
             if name == REQUIRED_UVSET:
                 details.append(f"{name} (required)")
-            elif name in WHITELIST_UVSETS:
+            elif _is_whitelisted_uvset(name):
                 details.append(f"{name} (whitelisted)")
             elif name in unconnected_extras:
                 details.append(f"{name} [未接続]")
