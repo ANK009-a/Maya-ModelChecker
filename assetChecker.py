@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-import os
-import runpy
 import io
 import contextlib
 import re
+import json
+import urllib.request
+import types
+import sys
 
 import maya.OpenMayaUI as omui
 try:
@@ -25,11 +27,14 @@ def maya_main_window():
 # ============================================================
 # 設定
 # ============================================================
-TARGET_DIR          = os.path.join(os.path.dirname(os.path.abspath(__file__)), "touls")
+GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
+GITHUB_API_INDEX    = f"{GITHUB_RAW}/tools/manifest_index.json"
 WINDOW_OBJECT_NAME  = "assetChecker"
 LEFT_W = 168   # 左パネル（チェックボタン列）の幅
 BTN_H  = 26    # チェックボタンの高さ
 FIX_W  = 40    # FIX ボタンの幅
+
+_script_cache = {}  # { "folder/script.py": "コード文字列" }
 
 
 # ============================================================
@@ -62,36 +67,64 @@ def close_existing_ui():
 
 
 # ============================================================
-# py 実行ユーティリティ
+# リモートローディングユーティリティ
 # ============================================================
-def run_py_get_structured_or_text(path):
-    if not os.path.exists(path):
-        print(f"{os.path.basename(path)} が見つかりません: {path}")
+def fetch_manifest_index():
+    """GitHub から manifest_index.json を取得してリスト返す"""
+    try:
+        with urllib.request.urlopen(GITHUB_API_INDEX, timeout=10) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        print(f"[assetChecker] manifest_index.json の取得に失敗しました: {e}")
+        return []
+
+
+def fetch_script(folder, script_name):
+    """GitHub raw からスクリプトを取得（メモリキャッシュ付き）"""
+    key = f"{folder}/{script_name}" if folder else script_name
+    if key in _script_cache:
+        return _script_cache[key]
+    path = f"tools/{folder}/{script_name}" if folder else f"tools/{script_name}"
+    url = f"{GITHUB_RAW}/{path}"
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            code = resp.read().decode("utf-8")
+            _script_cache[key] = code
+            return code
+    except Exception as e:
+        print(f"[assetChecker] スクリプトの取得に失敗しました: {url}\n{e}")
+        return None
+
+
+def _ensure_util_module():
+    """_util.py を sys.modules に登録（import _util が使えるようにする）"""
+    if "_util" not in sys.modules:
+        code = fetch_script("", "_util.py")
+        if code:
+            mod = types.ModuleType("_util")
+            exec(compile(code, "_util.py", "exec"), mod.__dict__)
+            sys.modules["_util"] = mod
+
+
+def load_and_run(folder, script_name):
+    """スクリプトを取得して exec し、構造化結果または stdout テキストを返す"""
+    _ensure_util_module()
+    code = fetch_script(folder, script_name)
+    if code is None:
         return None, ""
 
-    # touls ディレクトリを sys.path に追加（_util.py などの共通モジュールを import できるように）
-    import sys
-    if TARGET_DIR not in sys.path:
-        sys.path.insert(0, TARGET_DIR)
-
-    # 1) 構造化結果（get_results / RESULTS）を優先
+    ns = {}
+    buf = io.StringIO()
     try:
-        ns = runpy.run_path(path, run_name="__runner__")
+        with contextlib.redirect_stdout(buf):
+            exec(compile(code, script_name, "exec"), ns)
         get_results = ns.get("get_results", None)
         if callable(get_results):
             return get_results(), ""
         if "RESULTS" in ns:
             return ns["RESULTS"], ""
     except Exception as e:
-        print(f"Execution Error (structured): {path}\n{e}")
-
-    # 2) 旧方式：stdout キャプチャ
-    buf = io.StringIO()
-    try:
-        with contextlib.redirect_stdout(buf):
-            runpy.run_path(path, run_name="__main__")
-    except Exception as e:
-        print(f"Execution Error (stdout): {path}\n{e}")
+        print(f"[assetChecker] 実行エラー: {script_name}\n{e}")
 
     return None, buf.getvalue().strip()
 
@@ -246,57 +279,6 @@ QPushButton:pressed  { background-color: #6a2020; }
 QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
 """
 
-    # ----------------------------------------------------------
-    # ツールチップ定義  (title, description)
-    # ----------------------------------------------------------
-    _TOOLTIPS = {
-        "animationKey":   ("Animation Key",
-                           "アニメーションキーが残っているノードを検出します。"),
-        "colorSet":       ("Color Set",
-                           "カラーセットを持つ mesh を検出します。"),
-        "defaultMaterial":("Default Material",
-                           "デフォルトマテリアル (initialShadingGroup) が<br>"
-                           "割り当てられたままの mesh を検出します。"),
-        "emptyGroup":     ("Empty Group",
-                           "子オブジェクトも shape も持たない<br>空のグループ transform を検出します。"),
-        "freeze":         ("Freeze Transform",
-                           "移動・回転・スケール値がフリーズされていない<br>transform を検出します。"),
-        "hiddenObject":   ("Hidden Object",
-                           "visibility が OFF になっているオブジェクトを検出します。"),
-        "history":        ("Construction History",
-                           "コンストラクションヒストリーが残っている<br>mesh を検出します。"),
-        "isolateVtx":     ("Isolated Vertex",
-                           "エッジやフェースに接続されていない<br>孤立頂点を検出します。"),
-        "laminaFace":     ("Lamina Face",
-                           "同じ頂点を共有する重複フェース<br>（ラミナフェース）を検出します。"),
-        "lockNormal":     ("Locked Normal",
-                           "ロックされた法線 (Freeze Normals) を持つ<br>mesh を検出します。"),
-        "meshShapeName":  ("Mesh Shape Name",
-                           "transform 名と Shape 名が一致しない<br>mesh を検出します。"),
-        "nameCollision":  ("Name Collision",
-                           "シーン内に同名のノードが複数存在する場合を検出します。"),
-        "negativeScale":  ("Negative Scale",
-                           "スケール値がマイナスの transform を検出します。"),
-        "nonManifold":    ("Non-Manifold",
-                           "非多様体エッジ・頂点を検出します。"),
-        "overlappingVtx": ("Overlapping Vertex",
-                           "同一座標に重複して存在する頂点を検出します。"),
-        "pivot":          ("Pivot",
-                           "ピボットがワールド原点にない mesh を検出します。"),
-        "reversedNormal": ("Reversed Normal",
-                           "法線が逆向きのフェースを検出します。"),
-        "texturePath":    ("Texture Path",
-                           "テクスチャパスが絶対パスだったり<br>ファイルが存在しない file ノードを検出します。"),
-        "uv(0.0-1.0)":   ("UV Range",
-                           "UV 座標が 0〜1 の範囲外にある mesh を検出します。"),
-        "uvSet(error)":   ("UV Set (Error)",
-                           "UV Set Editor に表示されないが<br>UV データを保持している UVset を検出します。"),
-        "uvSet(extra)":   ("UV Set (Extra)",
-                           "map1 以外の余分な UV セットを持つ mesh を検出します。"),
-        "vtxTweak":       ("Vertex Tweak",
-                           "頂点トゥイーク (pnts 配列) が残っている<br>mesh を検出します。"),
-    }
-
     # Maya 選択をスキップする疑似キー
     _SKIP_SELECT_KEYS = frozenset({
         "stdout", "ALL_CHECK",
@@ -339,11 +321,6 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
         self._all_fix_index     = 0
 
         self._build_ui()
-
-        if not os.path.exists(TARGET_DIR):
-            self.rows_layout.addWidget(QtWidgets.QLabel("対象フォルダーが存在しません"))
-            return
-
         self._load_folders()
         QtCore.QTimer.singleShot(0, self._adjust_height)
 
@@ -444,18 +421,18 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
     # フォルダ読み込み → 左ペイン生成
     # ----------------------------------------------------------
     def _load_folders(self):
-        folders = sorted(
-            f for f in os.listdir(TARGET_DIR)
-            if os.path.isdir(os.path.join(TARGET_DIR, f)) and not f.startswith("_")
-        )
-        self.folders = folders
+        manifest = fetch_manifest_index()
+        if not manifest:
+            self.rows_layout.addWidget(QtWidgets.QLabel("ツール一覧の取得に失敗しました"))
+            return
 
-        for folder in folders:
+        self.folders = [entry["folder"] for entry in manifest]
+
+        for entry in manifest:
+            folder = entry["folder"]
             self._folder_states[folder] = _S_UNCHECKED
             self._folder_counts[folder] = 0
-
-            correct_path = os.path.join(TARGET_DIR, folder, f"{folder}_correct.py")
-            self.has_correct_script[folder] = os.path.exists(correct_path)
+            self.has_correct_script[folder] = entry.get("has_fix", False)
 
             row = QtWidgets.QHBoxLayout()
             row.setSpacing(4)
@@ -468,8 +445,9 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
             btn.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
             btn.setStyleSheet(self._SS_BTN_UNCHECKED)
             btn.clicked.connect(lambda *_, f=folder: self.run_check(f, show_details=True))
-            if folder in self._TOOLTIPS:
-                title, desc = self._TOOLTIPS[folder]
+            title = entry.get("title", folder)
+            desc  = entry.get("description", "")
+            if title or desc:
                 btn.setToolTip(
                     f"<b style='font-size:13px;'>{title}</b>"
                     f"<hr style='border:1px solid #3a6488; margin:4px 0;'>"
@@ -479,14 +457,13 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
             row.addWidget(btn)
             self._check_btns[folder] = btn
 
-            # FIX ボタン（correct スクリプトあり・エラー時のみ表示）
+            # FIX ボタン（has_fix=true のツール・エラー時のみ表示）
             fix_btn = QtWidgets.QPushButton("FIX")
             fix_btn.setFixedWidth(FIX_W)
             fix_btn.setFixedHeight(BTN_H)
             fix_btn.setStyleSheet(self._SS_BTN_FIX)
             fix_btn.setVisible(False)
-            fix_path = os.path.join(TARGET_DIR, folder, f"{folder}_correct.py")
-            fix_btn.clicked.connect(lambda *_, p=fix_path, f=folder: self._run_fix(p, f))
+            fix_btn.clicked.connect(lambda *_, f=folder: self._run_fix(f))
             row.addWidget(fix_btn)
             self._fix_btns[folder] = fix_btn
 
@@ -667,8 +644,7 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
     # チェック実行
     # ----------------------------------------------------------
     def run_check(self, folder, show_details=True):
-        check_path = os.path.join(TARGET_DIR, folder, f"{folder}_check.py")
-        structured, text = run_py_get_structured_or_text(check_path)
+        structured, text = load_and_run(folder, f"{folder}_check.py")
 
         if structured is not None:
             obj_to_details = self.normalize_structured(structured)
@@ -710,9 +686,9 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
     # ----------------------------------------------------------
     # FIX 実行
     # ----------------------------------------------------------
-    def _run_fix(self, path, folder):
+    def _run_fix(self, folder):
         self._select_check_results(folder)  # チェック結果オブジェクトを事前に Maya 選択
-        structured, text = run_py_get_structured_or_text(path)
+        structured, text = load_and_run(folder, f"{folder}_correct.py")
         if structured is not None:
             self.set_object_results(self.normalize_structured(structured))
         else:
@@ -779,9 +755,8 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
             return
         folder = self._all_fix_queue[self._all_fix_index]
         self._all_fix_index += 1
-        fix_path = os.path.join(TARGET_DIR, folder, f"{folder}_correct.py")
         self._select_check_results(folder)  # チェック結果オブジェクトを事前に Maya 選択
-        run_py_get_structured_or_text(fix_path)
+        load_and_run(folder, f"{folder}_correct.py")
         self.run_check(folder, show_details=False)
         QtWidgets.QApplication.processEvents()
         QtCore.QTimer.singleShot(0, self._step_all_fix)

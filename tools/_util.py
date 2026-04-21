@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-_util.py  ─  assetChecker touls 共通ユーティリティ
+_util.py  ─  assetChecker tools 共通ユーティリティ
 
-assetChecker.py が TARGET_DIR（= このファイルのあるディレクトリ）を
-sys.path に追加するため、各スクリプトから直接 import できる:
+assetChecker.py が GitHub からフェッチして sys.modules に登録するため、
+各スクリプトから直接 import できる:
 
     from _util import iter_scene_mesh_shapes
 """
