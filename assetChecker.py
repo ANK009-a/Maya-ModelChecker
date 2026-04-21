@@ -75,7 +75,7 @@ def fetch_manifest_index():
     """GitHub から manifest_index.json を取得してリスト返す"""
     try:
         with urllib.request.urlopen(GITHUB_API_INDEX, timeout=10) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+            return json.loads(resp.read().decode("utf-8-sig"))
     except Exception as e:
         print(f"[assetChecker] manifest_index.json の取得に失敗しました: {e}")
         return []
