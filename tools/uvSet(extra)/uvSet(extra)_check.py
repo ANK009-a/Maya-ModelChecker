@@ -5,10 +5,12 @@ UV Set check (extra UV sets)
 目的:
 - シーン内の mesh shape を全件走査し、以下の mesh を検出する
   1) 必須UVセット "map1" が無い
-  2) "map1" 以外のUVセットが 2 個以上ある
-  3) "map1" 以外のUVセットが 1 個だが、どこにも接続されていない（= 未使用で残存）
+  2) "map1" / ホワイトリスト 以外のUVセットが 2 個以上ある
+  3) "map1" / ホワイトリスト 以外のUVセットが 1 個だが、どこにも接続されていない
 
-"map1" + 接続済みの余分 UV セット 1 個（Pencil 等の正常運用）は問題なしとして扱う。
+ホワイトリスト（WHITELIST_UVSETS）に含まれる UVSet は、
+Pencil+ 等のプラグインが独自に名前参照するため接続検出ができない。
+これらは「正常運用」として常にスキップする。
 
 UI連携（assetChecker想定）:
 - get_results() が list[dict] を返す（問題が無ければ []）
@@ -24,6 +26,12 @@ from _util import (
 )
 
 REQUIRED_UVSET = "map1"
+
+# 接続検出ができないが正常運用とみなす UVSet 名（Pencil+ 等のプラグイン）
+WHITELIST_UVSETS = frozenset([
+    "Pencil",
+    "PencilSelectedEdge",
+])
 
 
 # ----------------------------------------------------------------------
@@ -86,9 +94,13 @@ def get_results() -> list[dict]:
     for shape in _iter_scene_mesh_shapes():
         uv_sets = _get_uv_sets(shape)
         has_required = REQUIRED_UVSET in uv_sets
-        extra = [u for u in uv_sets if u != REQUIRED_UVSET]
+        # ホワイトリスト（Pencil+ 等）と map1 は判定対象外
+        extra = [
+            u for u in uv_sets
+            if u != REQUIRED_UVSET and u not in WHITELIST_UVSETS
+        ]
 
-        # map1 のみなら問題なし
+        # map1 あり ＆ 判定対象 extra が 0 → 問題なし
         if has_required and not extra:
             continue
 
@@ -114,11 +126,13 @@ def get_results() -> list[dict]:
         if not issues:
             continue
 
-        # 詳細表示：各 UVSet に接続状態のアノテーションを付ける
+        # 詳細表示：各 UVSet に状態のアノテーションを付ける
         details = []
         for name in uv_sets:
             if name == REQUIRED_UVSET:
                 details.append(f"{name} (required)")
+            elif name in WHITELIST_UVSETS:
+                details.append(f"{name} (whitelisted)")
             elif name in unconnected_extras:
                 details.append(f"{name} [未接続]")
             else:
