@@ -21,7 +21,7 @@ def get_results():
                 details.append(f"  {line.strip()}")
             results.append({
                 "transform": parent_short,
-                "message": f"ラミナフェース: {parent_short} ({len(lamina)} 面)",
+                "message": f"ラミナフェース ({len(lamina)} 面)",
                 "details": details,
             })
     return results

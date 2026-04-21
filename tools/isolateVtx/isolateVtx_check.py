@@ -73,7 +73,7 @@ def get_results():
 
         results.append({
             "transform": parent_short,
-            "message": f"孤立頂点あり: {parent_short} / {shape_short}（{len(isolated)} vtx）",
+            "message": f"孤立頂点あり: {shape_short}（{len(isolated)} vtx）",
             "details": details,
         })
 

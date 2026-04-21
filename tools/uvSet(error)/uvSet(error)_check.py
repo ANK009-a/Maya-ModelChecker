@@ -132,7 +132,7 @@ def get_results():
 
         results.append({
             "transform": parent_short,
-            "message": f"UVSet(非表示だがUV保持): {parent_short} / {shape_short}（{len(hidden_with_uv)} sets）",
+            "message": f"UVSet(非表示だがUV保持): {shape_short}（{len(hidden_with_uv)} sets）",
             "details": details,
         })
 

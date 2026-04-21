@@ -180,7 +180,7 @@ def get_results():
 
         results.append({
             "transform": parent_short,
-            "message": f"頂点移動履歴あり: {parent_short} / {shape_short}（{count} vtx）",
+            "message": f"頂点移動履歴あり: {shape_short}（{count} vtx）",
             "details": details,
         })
 

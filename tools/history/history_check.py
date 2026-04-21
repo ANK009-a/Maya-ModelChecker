@@ -70,10 +70,7 @@ def get_results():
 
         results.append({
             "transform": parent_short,
-            "message": (
-                f"ヒストリー残留: {parent_short} "
-                f"(poly:{len(poly_ops)}, deformer:{len(deformers)})"
-            ),
+            "message": f"ヒストリー残留 (poly:{len(poly_ops)}, deformer:{len(deformers)})",
             "details": details,
         })
     return results

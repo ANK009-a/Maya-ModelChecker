@@ -45,7 +45,7 @@ def get_results() -> list[dict]:
         parent_short = _short_name(_parent_transform(shape))
         results.append({
             "transform": parent_short,
-            "message": f"カラーセット {len(color_sets)} 件: {parent_short}",
+            "message": f"カラーセット {len(color_sets)} 件",
             "details": color_sets,
         })
 

@@ -29,7 +29,7 @@ def get_results():
                     details.append(f"  {line.strip()}")
             results.append({
                 "transform": parent_short,
-                "message": f"非マニフォールド検出: {parent_short} (edge:{len(nm_edges)}, vtx:{len(nm_verts)})",
+                "message": f"非マニフォールド検出 (edge:{len(nm_edges)}, vtx:{len(nm_verts)})",
                 "details": details,
             })
     return results

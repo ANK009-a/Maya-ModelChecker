@@ -155,7 +155,7 @@ def get_results() -> list[dict]:
         transform_key = _short_name(_parent_transform(shape))
         results.append({
             "transform": transform_key,
-            "message": f"UVSet({', '.join(issues)}): {transform_key}",
+            "message": f"UVSet({', '.join(issues)})",
             "details": details,
         })
 

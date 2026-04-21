@@ -85,7 +85,7 @@ def get_results():
 
         results.append({
             "transform": parent_short,
-            "message": f"重複頂点: {parent_short} ({len(overlapping)} 個)",
+            "message": f"重複頂点 ({len(overlapping)} 個)",
             "details": details,
         })
     return results

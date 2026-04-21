@@ -112,7 +112,7 @@ def get_results():
         if n_faces > MAX_FACES_PER_MESH:
             results.append({
                 "transform": parent_short,
-                "message": f"スキップ（フェース数 {n_faces} > {MAX_FACES_PER_MESH}）: {parent_short}",
+                "message": f"スキップ（フェース数 {n_faces} > {MAX_FACES_PER_MESH}）",
                 "details": ["フェース数が多すぎます。Maya の Mesh > Cleanup を使用してください。"],
             })
             continue
@@ -130,7 +130,7 @@ def get_results():
 
         results.append({
             "transform": parent_short,
-            "message": f"法線反転フェース: {parent_short} ({len(reversed_faces)} 面)",
+            "message": f"法線反転フェース ({len(reversed_faces)} 面)",
             "details": details,
         })
     return results

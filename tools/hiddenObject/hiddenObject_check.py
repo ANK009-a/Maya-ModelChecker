@@ -47,7 +47,7 @@ def get_results():
                 vis = "不明"
             results.append({
                 "transform": parent_short,
-                "message": f"非表示オブジェクト: {parent_short}",
+                "message": "非表示オブジェクト",
                 "details": [
                     f"visibility: {vis}",
                     "correct で表示状態に戻す（削除はユーザーが判断してください）",
