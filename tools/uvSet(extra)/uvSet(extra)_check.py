@@ -17,7 +17,11 @@ UI連携（assetChecker想定）:
 from __future__ import annotations
 
 import maya.cmds as cmds
-from _util import iter_scene_mesh_shapes as _iter_scene_mesh_shapes
+from _util import (
+    iter_scene_mesh_shapes as _iter_scene_mesh_shapes,
+    short_name as _short_name,
+    parent_transform as _parent_transform,
+)
 
 REQUIRED_UVSET = "map1"
 
@@ -25,11 +29,6 @@ REQUIRED_UVSET = "map1"
 # ----------------------------------------------------------------------
 # Utility
 # ----------------------------------------------------------------------
-def _short_name(dag_path: str) -> str:
-    """Return the last component of a DAG path (e.g. '|a|b|c' -> 'c')."""
-    return dag_path.rsplit("|", 1)[-1] if "|" in dag_path else dag_path
-
-
 def _get_uv_sets(shape: str) -> list[str]:
     """Return UV set names for the given mesh shape."""
     try:
@@ -51,29 +50,19 @@ def get_results() -> list[dict]:
     results: list[dict] = []
 
     for shape in _iter_scene_mesh_shapes():
-        if not cmds.objExists(shape):
-            continue
-
         uv_sets = _get_uv_sets(shape)
         has_required = REQUIRED_UVSET in uv_sets
-        has_extra = any(u != REQUIRED_UVSET for u in uv_sets)
+        extra = [u for u in uv_sets if u != REQUIRED_UVSET]
 
         # "map1" のみなら問題なし
-        if has_required and not has_extra:
+        if has_required and not extra:
             continue
 
-        # UI左側のグルーピングキー（Cは入れていない方針なので short 名）
-        try:
-            parent = (cmds.listRelatives(shape, parent=True, fullPath=True) or [shape])[0]
-        except Exception:
-            parent = shape
-        transform_key = _short_name(parent)
+        transform_key = _short_name(_parent_transform(shape))
 
-        has_required = REQUIRED_UVSET in uv_sets
         issues = []
         if not has_required:
             issues.append(f"{REQUIRED_UVSET} なし")
-        extra = [u for u in uv_sets if u != REQUIRED_UVSET]
         if extra:
             issues.append(f"余分な UVSet {len(extra)} 件")
 

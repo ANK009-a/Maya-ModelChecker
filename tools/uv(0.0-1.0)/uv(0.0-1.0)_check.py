@@ -17,7 +17,12 @@ UVSpace(0.0-1.0)_check_fast.py
 from __future__ import annotations
 
 import maya.cmds as cmds
-from _util import iter_scene_mesh_shapes as _iter_scene_mesh_shapes_no_intermediate
+from _util import (
+    iter_scene_mesh_shapes as _iter_scene_mesh_shapes_no_intermediate,
+    short_name as _short_name,
+    parent_transform as _parent_transform,
+    is_referenced as _is_referenced,
+)
 
 try:
     import maya.api.OpenMaya as om2
@@ -25,22 +30,6 @@ except Exception:
     om2 = None
 
 EPS = 1e-9  # 端の誤差許容
-
-
-def _short_name(dag_path: str) -> str:
-    return dag_path.rsplit("|", 1)[-1] if "|" in dag_path else dag_path
-
-
-def _parent_transform(shape: str) -> str:
-    p = cmds.listRelatives(shape, parent=True, fullPath=True) or []
-    return p[0] if p else shape
-
-
-def _is_referenced(node: str) -> bool:
-    try:
-        return bool(cmds.referenceQuery(node, isNodeReferenced=True))
-    except Exception:
-        return False
 
 
 def _get_mfnmesh(shape: str):
@@ -126,9 +115,6 @@ def get_results():
     shapes = _iter_scene_mesh_shapes_no_intermediate()
 
     for shape in shapes:
-        if not cmds.objExists(shape):
-            continue
-
         parent = _parent_transform(shape)
 
         # 参照ノードはスキップ（親transformだけで判定して呼び出し回数削減）

@@ -15,13 +15,12 @@ freeze_check_allScene.py
 """
 
 import maya.cmds as cmds
-from _util import iter_scene_mesh_shapes as _iter_scene_mesh_shapes
+from _util import (
+    iter_unique_mesh_parents as _iter_unique_mesh_parents,
+    short_name as _short_name,
+)
 
 TOL = 1e-6  # 許容誤差（必要なら 1e-4 などに）
-
-
-def _short_name(dag_path: str) -> str:
-    return dag_path.rsplit("|", 1)[-1] if "|" in dag_path else dag_path
 
 
 def _neq(a, b, tol=TOL):
@@ -32,32 +31,8 @@ def _vec_not_equal(v, target, tol=TOL):
     return any(_neq(v[i], target[i], tol) for i in range(3))
 
 
-def _mesh_parent_transforms():
-    """
-    シーン内の mesh shape の親 transform を重複なしで返す（順序保持）
-    """
-    transforms = []
-    for shape in _iter_scene_mesh_shapes():
-        if not cmds.objExists(shape):
-            continue
-        try:
-            p = cmds.listRelatives(shape, parent=True, fullPath=True) or []
-            if p and cmds.nodeType(p[0]) == "transform":
-                transforms.append(p[0])
-        except Exception:
-            pass
-
-    seen = set()
-    uniq = []
-    for t in transforms:
-        if t not in seen:
-            seen.add(t)
-            uniq.append(t)
-    return uniq
-
-
 def get_results():
-    transforms = _mesh_parent_transforms()
+    transforms = _iter_unique_mesh_parents()
     results = []
 
     # シーンに mesh が無ければ空（問題なし）

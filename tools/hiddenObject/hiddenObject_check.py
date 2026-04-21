@@ -5,13 +5,10 @@ visibility=False になっている mesh の親 transform を検出する。
 意図せず残った非表示メッシュはエクスポートやランタイムで問題になることがある。
 """
 import maya.cmds as cmds
-
-
-def _short_name(dag_path):
-    return dag_path.rsplit("|", 1)[-1] if "|" in dag_path else dag_path
-
-
-from _util import iter_scene_mesh_shapes as _iter_shapes
+from _util import (
+    iter_scene_mesh_shapes as _iter_shapes,
+    short_name as _short_name,
+)
 
 
 def _is_hidden(transform):
@@ -34,8 +31,6 @@ def get_results():
     shapes = _iter_shapes()
     seen = set()
     for shape in shapes:
-        if not cmds.objExists(shape):
-            continue
         parents = cmds.listRelatives(shape, parent=True, fullPath=True) or []
         if not parents:
             continue

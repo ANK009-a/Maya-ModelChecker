@@ -20,16 +20,11 @@ MAX_SHOW = 30       # 詳細に表示する頂点数
 CHUNK = 4096        # フォールバック時のレンジ走査チャンク（元:2048）
 
 
-def _short_name(dag_path: str) -> str:
-    return dag_path.rsplit("|", 1)[-1] if "|" in dag_path else dag_path
-
-
-def _parent_transform(shape: str) -> str:
-    p = cmds.listRelatives(shape, parent=True, fullPath=True) or []
-    return p[0] if p else shape
-
-
-from _util import iter_scene_mesh_shapes as _iter_shapes
+from _util import (
+    iter_scene_mesh_shapes as _iter_shapes,
+    short_name as _short_name,
+    parent_transform as _parent_transform,
+)
 
 
 def _vec_is_nonzero(v):
@@ -156,9 +151,6 @@ def get_results():
 
     shapes = _iter_shapes()
     for shape in shapes:
-        if not cmds.objExists(shape):
-            continue
-
         parent = _parent_transform(shape)
         parent_short = _short_name(parent)
         shape_short = _short_name(shape)

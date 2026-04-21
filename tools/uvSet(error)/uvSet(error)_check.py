@@ -23,26 +23,12 @@ import maya.cmds as cmds
 REQUIRED_UVSET = "map1"  # 使わないが、将来の表示用に残してもOK
 
 
-from _util import iter_scene_mesh_shapes as _iter_shapes
-
-
-def _parent_transform(shape: str) -> str:
-    try:
-        p = cmds.listRelatives(shape, parent=True, fullPath=True) or []
-        return p[0] if p else shape
-    except Exception:
-        return shape
-
-
-def _short_name(dag_path: str) -> str:
-    return dag_path.rsplit("|", 1)[-1] if "|" in dag_path else dag_path
-
-
-def _is_referenced(node: str) -> bool:
-    try:
-        return bool(cmds.referenceQuery(node, isNodeReferenced=True))
-    except Exception:
-        return False
+from _util import (
+    iter_scene_mesh_shapes as _iter_shapes,
+    short_name as _short_name,
+    parent_transform as _parent_transform,
+    is_referenced as _is_referenced,
+)
 
 
 def _get_visible_uv_sets(shape: str):
@@ -94,9 +80,6 @@ def get_results():
     shapes = _iter_shapes()
 
     for shape in shapes:
-        if not cmds.objExists(shape):
-            continue
-
         # 参照は基本スキップ（事故防止＆取得できても扱いが難しいため）
         parent = _parent_transform(shape)
         if _is_referenced(shape) or _is_referenced(parent):

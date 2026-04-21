@@ -36,6 +36,50 @@ FIX_W  = 40    # FIX ボタンの幅
 
 _script_cache = {}  # { "folder/script.py": "コード文字列" }
 
+# 毎回最新の _util をロードするためにキャッシュをクリア
+sys.modules.pop("_util", None)
+
+
+# ============================================================
+# ダブルクリック対応ボタン
+# ============================================================
+class _DoubleClickButton(QtWidgets.QPushButton):
+    """QTimer でシングル/ダブルクリックを明確に分離したボタン。
+    - singleClicked : 短時間内にダブルクリックが来なかった場合にのみ発火
+    - doubleClicked : ダブルクリック時に発火（singleClicked は発火しない）
+    """
+    singleClicked = QtCore.Signal()
+    doubleClicked = QtCore.Signal()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # シングル/ダブル判定待ち時間（短めにしてシングルクリックの反応を良くする）
+        # Qt 既定の doubleClickInterval(通常500ms) より短い値の小さい方を採用
+        _interval = min(180, QtWidgets.QApplication.doubleClickInterval())
+        self._click_timer = QtCore.QTimer(self)
+        self._click_timer.setSingleShot(True)
+        self._click_timer.setInterval(_interval)
+        self._click_timer.timeout.connect(self.singleClicked.emit)
+        self._cancel_next_release = False
+
+    def mouseReleaseEvent(self, event):
+        super().mouseReleaseEvent(event)  # ボタン内部状態を正常にリセット
+        if event.button() != QtCore.Qt.LeftButton:
+            return
+        # ダブルクリックの2回目 release はタイマー起動を抑制
+        if self._cancel_next_release:
+            self._cancel_next_release = False
+            return
+        # シングルクリックかもしれない → タイマーで遅延発火
+        self._click_timer.start()
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == QtCore.Qt.LeftButton:
+            self._click_timer.stop()       # シングル候補を破棄
+            self._cancel_next_release = True
+            self.doubleClicked.emit()
+        super().mouseDoubleClickEvent(event)
+
 
 # ============================================================
 # ツールチップ即時表示フィルター
@@ -108,12 +152,19 @@ def _ensure_util_module():
             sys.modules["_util"] = mod
 
 
-def load_and_run(folder, script_name):
-    """スクリプトを取得して exec し、構造化結果または stdout テキストを返す"""
+def load_and_run(folder, script_name, selection=None):
+    """スクリプトを取得して exec し、構造化結果または stdout テキストを返す。
+    selection=None  : 呼び出し時点の Maya 選択を使用
+    selection=[]    : シーン全体を対象（強制全チェック）
+    selection=[...] : 指定オブジェクトのみを対象
+    """
     _ensure_util_module()
     util_mod = sys.modules.get("_util")
-    if util_mod and cmds:
-        util_mod._checker_selection = cmds.ls(sl=True, long=True) or []
+    if util_mod:
+        if selection is None:
+            util_mod._checker_selection = (cmds.ls(sl=True, long=True) or []) if cmds else []
+        else:
+            util_mod._checker_selection = selection
     code = fetch_script(folder, script_name)
     if code is None:
         return None, ""
@@ -271,6 +322,19 @@ QPushButton:pressed  { background-color: #2a5aa0; }
 QPushButton:disabled { background-color: #2a3a50; color: #506070; }
 """
 
+    _SS_BTN_CHECK = """QPushButton {
+    background-color: #2a5c40;
+    color: #7ae0a8;
+    border-radius: 6px;
+    height: 26px;
+    padding: 0 14px;
+    font-size: 12px;
+}
+QPushButton:hover    { background-color: #3a7a58; }
+QPushButton:pressed  { background-color: #1e4430; }
+QPushButton:disabled { background-color: #1e3028; color: #4a6858; }
+"""
+
     _SS_BTN_ALL_FIX = """QPushButton {
     background-color: #8a2c2c;
     color: #ffbbbb;
@@ -317,10 +381,11 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
         # ツールチップ即時表示フィルター（全ボタン共有）
         self._tooltip_filter = _InstantTooltipFilter(self)
 
-        # ALL CHECK / ALL FIX 実行フラグ
-        self._all_check_running = False
-        self._all_check_index   = 0
-        self._all_check_summary = []
+        # ALL CHECK / CHECK / ALL FIX 実行フラグ
+        self._all_check_running   = False
+        self._all_check_index     = 0
+        self._all_check_summary   = []
+        self._all_check_selection = []   # [] = 全体, [...] = 選択範囲
         self._all_fix_running   = False
         self._all_fix_queue     = []
         self._all_fix_index     = 0
@@ -349,6 +414,11 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
         )
         top_lay.addWidget(title)
         top_lay.addStretch()
+
+        self.check_btn = QtWidgets.QPushButton("CHECK")
+        self.check_btn.setStyleSheet(self._SS_BTN_CHECK)
+        self.check_btn.clicked.connect(self.start_check)
+        top_lay.addWidget(self.check_btn)
 
         self.all_check_btn = QtWidgets.QPushButton("ALL CHECK")
         self.all_check_btn.setStyleSheet(self._SS_BTN_ALL)
@@ -443,13 +513,14 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
             row.setSpacing(4)
             row.setContentsMargins(0, 0, 0, 0)
 
-            # チェックボタン（メイン）
-            btn = QtWidgets.QPushButton(f"  ○  {folder}")
+            # チェックボタン（メイン）— ダブルクリックでチェック実行
+            btn = _DoubleClickButton(f"  ○  {folder}")
             btn.setFixedHeight(BTN_H)
             btn.setMinimumWidth(1)   # テキストが長くても FIX を押し出さないよう最小幅を解除
             btn.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
             btn.setStyleSheet(self._SS_BTN_UNCHECKED)
-            btn.clicked.connect(lambda *_, f=folder: self.run_check(f, show_details=True))
+            btn.singleClicked.connect(lambda f=folder: self._show_last_results(f))
+            btn.doubleClicked.connect(lambda f=folder: self.run_check(f, show_details=True))
             title = entry.get("title", folder)
             desc  = entry.get("description", "")
             if title or desc:
@@ -608,13 +679,11 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
 
     def set_object_results(self, obj_to_details):
         self.object_to_details = obj_to_details or {}
-        self.object_list.blockSignals(True)
         self.object_list.clear()
         for key in sorted(self.object_to_details.keys()):
             item = QtWidgets.QListWidgetItem(key)
             item.setData(QtCore.Qt.UserRole, key)
             self.object_list.addItem(item)
-        self.object_list.blockSignals(False)
         if self.object_list.count() > 0:
             self.object_list.setCurrentRow(0)
         else:
@@ -648,8 +717,8 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
     # ----------------------------------------------------------
     # チェック実行
     # ----------------------------------------------------------
-    def run_check(self, folder, show_details=True):
-        structured, text = load_and_run(folder, f"{folder}_check.py")
+    def run_check(self, folder, show_details=True, selection=None):
+        structured, text = load_and_run(folder, f"{folder}_check.py", selection=selection)
 
         if structured is not None:
             obj_to_details = self.normalize_structured(structured)
@@ -688,12 +757,17 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
             except Exception:
                 pass
 
+    def _show_last_results(self, folder):
+        """シングルクリック時：直近のチェック結果を右パネルに表示する（再チェックは行わない）"""
+        cached = self._last_check_results.get(folder)
+        self.set_object_results(cached if cached is not None else {})
+
     # ----------------------------------------------------------
     # FIX 実行
     # ----------------------------------------------------------
     def _run_fix(self, folder):
         self._select_check_results(folder)  # チェック結果オブジェクトを事前に Maya 選択
-        structured, text = load_and_run(folder, f"{folder}_correct.py")
+        structured, text = load_and_run(folder, f"{folder}_correct.py", selection=[])
         if structured is not None:
             self.set_object_results(self.normalize_structured(structured))
         else:
@@ -704,12 +778,30 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
     # ----------------------------------------------------------
     # ALL CHECK
     # ----------------------------------------------------------
+    def start_check(self):
+        """選択オブジェクトのみを対象に全ツールをチェック"""
+        if self._all_check_running or self._all_fix_running:
+            return
+        sel = (cmds.ls(sl=True, long=True) or []) if cmds else []
+        if not sel:
+            self.detail_view.setPlainText("オブジェクトを選択してください")
+            return
+        self._all_check_running   = True
+        self._all_check_index     = 0
+        self._all_check_summary   = []
+        self._all_check_selection = sel
+        self._set_busy(True)
+        self.set_object_results({})
+        self.detail_view.setPlainText("CHECK 実行中...")
+        QtCore.QTimer.singleShot(0, self._step_all_check)
+
     def start_all_check(self):
         if self._all_check_running or self._all_fix_running:
             return
-        self._all_check_running = True
-        self._all_check_index   = 0
-        self._all_check_summary = []
+        self._all_check_running   = True
+        self._all_check_index     = 0
+        self._all_check_summary   = []
+        self._all_check_selection = []   # 空リスト = シーン全体
         self._set_busy(True)
         self.set_object_results({})
         self.detail_view.setPlainText("ALL CHECK 実行中...")
@@ -721,7 +813,7 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
             return
         folder = self.folders[self._all_check_index]
         self._all_check_index += 1
-        has_issue = self.run_check(folder, show_details=False)
+        has_issue = self.run_check(folder, show_details=False, selection=self._all_check_selection)
         self._all_check_summary.append(("ERROR" if has_issue else "OK", folder))
         QtWidgets.QApplication.processEvents()
         QtCore.QTimer.singleShot(0, self._step_all_check)
@@ -729,7 +821,8 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
     def _finish_all_check(self):
         self._all_check_running = False
         self._set_busy(False)
-        lines = ["ALL CHECK 結果", ""]
+        header = "CHECK 結果" if self._all_check_selection else "ALL CHECK 結果"
+        lines = [header, ""]
         for status, folder in self._all_check_summary:
             lines.append(f"  {status} : {folder}")
         self.set_object_results({"ALL_CHECK": lines})
@@ -775,7 +868,9 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
     # ビジー状態の一括制御
     # ----------------------------------------------------------
     def _set_busy(self, busy):
-        """ALL CHECK / ALL FIX 実行中のボタン一括制御"""
+        """ALL CHECK / CHECK / ALL FIX 実行中のボタン一括制御"""
+        self.check_btn.setEnabled(not busy)
+        self.check_btn.setText("…" if busy else "CHECK")
         self.all_check_btn.setEnabled(not busy)
         self.all_check_btn.setText("…" if busy else "ALL CHECK")
         self.all_fix_btn.setText("…" if (busy and self._all_fix_running) else "ALL FIX")

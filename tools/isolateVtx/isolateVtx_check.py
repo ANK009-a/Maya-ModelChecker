@@ -13,7 +13,12 @@ checkList.py 連携想定:
 - get_results() が list[dict] を返す（問題なければ []）
 """
 
-import maya.cmds as cmds
+from _util import (
+    iter_scene_mesh_shapes as _iter_shapes,
+    short_name as _short_name,
+    parent_transform as _parent_transform,
+    is_referenced as _is_referenced,
+)
 
 try:
     import maya.api.OpenMaya as om2
@@ -21,25 +26,6 @@ except Exception:
     om2 = None
 
 MAX_SHOW = 50
-
-
-def _short_name(dag_path: str) -> str:
-    return dag_path.rsplit("|", 1)[-1] if "|" in dag_path else dag_path
-
-
-def _parent_transform(shape: str) -> str:
-    p = cmds.listRelatives(shape, parent=True, fullPath=True) or []
-    return p[0] if p else shape
-
-
-from _util import iter_scene_mesh_shapes as _iter_shapes
-
-
-def _is_referenced(node: str) -> bool:
-    try:
-        return bool(cmds.referenceQuery(node, isNodeReferenced=True))
-    except Exception:
-        return False
 
 
 def _get_dag_path(node: str):
@@ -57,9 +43,6 @@ def get_results():
 
     shapes = _iter_shapes()
     for shape in shapes:
-        if not cmds.objExists(shape):
-            continue
-
         parent = _parent_transform(shape)
         if _is_referenced(shape) or _is_referenced(parent):
             continue

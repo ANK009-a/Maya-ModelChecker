@@ -1,18 +1,15 @@
 # -*- coding: utf-8 -*-
 import maya.cmds as cmds
-from _util import iter_scene_mesh_shapes as _iter_shapes
-
-
-def _short_name(dag_path):
-    return dag_path.rsplit("|", 1)[-1] if "|" in dag_path else dag_path
+from _util import (
+    iter_scene_mesh_shapes as _iter_shapes,
+    short_name as _short_name,
+)
 
 
 def get_results():
     results = []
     shapes = _iter_shapes()
     for shape in shapes:
-        if not cmds.objExists(shape):
-            continue
         parents = cmds.listRelatives(shape, parent=True, fullPath=True) or []
         parent = parents[0] if parents else shape
         parent_short = _short_name(parent)

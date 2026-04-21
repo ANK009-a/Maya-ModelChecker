@@ -14,17 +14,16 @@ checkList.py のUI連携想定:
 
 from collections import defaultdict
 import maya.cmds as cmds
+from _util import (
+    short_name as _leaf_name,
+    checker_selection as _checker_selection,
+)
 
 # 必要なら除外したい “標準” ノード（カメラ類）
 _DEFAULT_EXCLUDES = {
     "persp", "top", "front", "side",
     "perspShape", "topShape", "frontShape", "sideShape",
 }
-
-
-def _leaf_name(dag_path: str) -> str:
-    """|a|b|node -> node"""
-    return dag_path.rsplit("|", 1)[-1] if "|" in dag_path else dag_path
 
 
 def get_results(exclude_defaults: bool = True):
@@ -39,7 +38,11 @@ def get_results(exclude_defaults: bool = True):
           ...
         ]
     """
-    dag_paths = cmds.ls(dag=True, long=True) or []
+    sel = _checker_selection()
+    if sel:
+        dag_paths = cmds.ls(sel, dag=True, long=True) or []
+    else:
+        dag_paths = cmds.ls(dag=True, long=True) or []
     groups = defaultdict(list)
 
     for p in dag_paths:

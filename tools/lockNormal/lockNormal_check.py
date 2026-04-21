@@ -16,30 +16,11 @@ lockNormal_check_allScene_fast.py
 from __future__ import annotations
 
 import maya.cmds as cmds
-from _util import iter_scene_mesh_shapes as _iter_scene_mesh_shapes
-
-
-# ----------------------------
-# Utils
-# ----------------------------
-def _short_name(dag_path: str) -> str:
-    return dag_path.rsplit("|", 1)[-1] if "|" in dag_path else dag_path
-
-
-def _is_intermediate(shape: str) -> bool:
-    try:
-        return bool(cmds.getAttr(shape + ".intermediateObject"))
-    except Exception:
-        return False
-
-
-def _shape_parent_transform(shape: str) -> str:
-    """shape の親 transform（fullPath）を返す。無い場合は shape を返す。"""
-    try:
-        p = cmds.listRelatives(shape, parent=True, fullPath=True) or []
-        return p[0] if p else shape
-    except Exception:
-        return shape
+from _util import (
+    iter_scene_mesh_shapes as _iter_scene_mesh_shapes,
+    short_name as _short_name,
+    parent_transform as _shape_parent_transform,
+)
 
 
 # ----------------------------

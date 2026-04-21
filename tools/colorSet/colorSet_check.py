@@ -16,18 +16,11 @@ UI連携（assetChecker想定）:
 from __future__ import annotations
 
 import maya.cmds as cmds
-from _util import iter_scene_mesh_shapes as _iter_shapes
-
-
-def _parent_transform_short(shape: str) -> str:
-    """shape の親transform短名（なければ shape の短名）"""
-    try:
-        p = cmds.listRelatives(shape, parent=True, fullPath=True) or []
-        parent = p[0] if p else shape
-    except Exception:
-        parent = shape
-
-    return parent.rsplit("|", 1)[-1] if "|" in parent else parent
+from _util import (
+    iter_scene_mesh_shapes as _iter_shapes,
+    short_name as _short_name,
+    parent_transform as _parent_transform,
+)
 
 
 def _get_color_sets(shape: str) -> list[str]:
@@ -45,14 +38,14 @@ def get_results() -> list[dict]:
     shapes = _iter_shapes()
 
     for shape in shapes:
-
         color_sets = _get_color_sets(shape)
         if not color_sets:
             continue
 
+        parent_short = _short_name(_parent_transform(shape))
         results.append({
-            "transform": _parent_transform_short(shape),
-            "message": f"カラーセット {len(color_sets)} 件: {_parent_transform_short(shape)}",
+            "transform": parent_short,
+            "message": f"カラーセット {len(color_sets)} 件: {parent_short}",
             "details": color_sets,
         })
 

@@ -13,11 +13,10 @@ DEFORMER_TYPES = frozenset([
 ])
 
 
-def _short_name(dag_path):
-    return dag_path.rsplit("|", 1)[-1] if "|" in dag_path else dag_path
-
-
-from _util import iter_scene_mesh_shapes as _iter_shapes
+from _util import (
+    iter_scene_mesh_shapes as _iter_shapes,
+    short_name as _short_name,
+)
 
 
 def get_results():
@@ -26,8 +25,6 @@ def get_results():
     seen_parents = set()
 
     for shape in shapes:
-        if not cmds.objExists(shape):
-            continue
         parents = cmds.listRelatives(shape, parent=True, fullPath=True) or []
         if not parents:
             continue

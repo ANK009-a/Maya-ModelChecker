@@ -5,17 +5,14 @@ overlappingVtx_check.py
 グリッドハッシュを使い、効率的に近傍を検索する。
 """
 import maya.cmds as cmds
+from _util import (
+    iter_scene_mesh_shapes as _iter_shapes,
+    short_name as _short_name,
+)
 
 THRESHOLD = 0.0001   # 重複判定距離（ワールド単位）
 MAX_SHOW = 30
 MAX_VERTS = 100000   # これ以上の頂点数はスキップ
-
-
-def _short_name(dag_path):
-    return dag_path.rsplit("|", 1)[-1] if "|" in dag_path else dag_path
-
-
-from _util import iter_scene_mesh_shapes as _iter_shapes
 
 
 def _find_overlapping_verts(shape, threshold=THRESHOLD):
@@ -66,8 +63,6 @@ def get_results():
     results = []
     shapes = _iter_shapes()
     for shape in shapes:
-        if not cmds.objExists(shape):
-            continue
         parents = cmds.listRelatives(shape, parent=True, fullPath=True) or []
         parent = parents[0] if parents else shape
         parent_short = _short_name(parent)

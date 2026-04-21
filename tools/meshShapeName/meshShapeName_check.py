@@ -11,29 +11,14 @@ transform: body_geo
 expected shape short name: body_geoShape
 """
 
-import maya.cmds as cmds
-
+from _util import (
+    iter_scene_mesh_shapes as _iter_shapes,
+    short_name as _short_name,
+    parent_transform as _parent_transform,
+    is_referenced as _is_referenced,
+)
 
 SUFFIX = "Shape"
-
-
-def _short_name(dag_path: str) -> str:
-    return dag_path.rsplit("|", 1)[-1] if "|" in dag_path else dag_path
-
-
-def _parent_transform(shape: str) -> str:
-    p = cmds.listRelatives(shape, parent=True, fullPath=True) or []
-    return p[0] if p else shape
-
-
-from _util import iter_scene_mesh_shapes as _iter_shapes
-
-
-def _is_referenced(node: str) -> bool:
-    try:
-        return bool(cmds.referenceQuery(node, isNodeReferenced=True))
-    except Exception:
-        return False
 
 
 def get_results():
@@ -41,9 +26,6 @@ def get_results():
 
     shapes = _iter_shapes()
     for shape in shapes:
-        if not cmds.objExists(shape):
-            continue
-
         parent = _parent_transform(shape)
         if _is_referenced(shape) or _is_referenced(parent):
             continue

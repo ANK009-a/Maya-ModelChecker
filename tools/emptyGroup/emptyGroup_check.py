@@ -5,21 +5,23 @@ emptyGroup_check.py
 接続がある場合は削除に注意が必要なため、その旨を詳細に表示する。
 """
 import maya.cmds as cmds
+from _util import (
+    short_name as _short_name,
+    checker_selection as _checker_selection,
+)
 
 DEFAULT_NODES = frozenset(["persp", "top", "front", "side", "left"])
 
 
-def _short_name(dag_path):
-    return dag_path.rsplit("|", 1)[-1] if "|" in dag_path else dag_path
-
-
 def get_results():
     results = []
-    transforms = cmds.ls(type="transform", long=True) or []
+    sel = _checker_selection()
+    if sel:
+        transforms = cmds.ls(sel, dag=True, type="transform", long=True) or []
+    else:
+        transforms = cmds.ls(type="transform", long=True) or []
 
     for tr in transforms:
-        if not cmds.objExists(tr):
-            continue
         short = _short_name(tr)
         if short in DEFAULT_NODES:
             continue
