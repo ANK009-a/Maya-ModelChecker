@@ -12,6 +12,17 @@ DEFORMER_TYPES = frozenset([
     "shrinkWrap", "softMod",
 ])
 
+# Maya が正常運用のため自動生成する補助ノード（ヒストリー残留ではない）
+IGNORE_TYPES = frozenset([
+    "time",
+    "mesh",
+    "shadingEngine",   # マテリアル割り当て SG（全 mesh 必須）
+    "groupId",         # 複数マテリアル割当時の補助ノード
+    "groupParts",      # groupId と対の接続ノード
+    "creaseSet",       # サブディビジョンクリース
+    "objectSet",       # ユーザー作成セット等
+])
+
 
 from _util import (
     iter_scene_mesh_shapes as _iter_shapes,
@@ -39,7 +50,7 @@ def get_results():
             h for h in history
             if h != shape
             and cmds.objExists(h)
-            and cmds.nodeType(h) not in ("time", "mesh")
+            and cmds.nodeType(h) not in IGNORE_TYPES
         ]
         if not history:
             continue
