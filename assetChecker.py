@@ -57,13 +57,15 @@ class _InstantTooltipFilter(QtCore.QObject):
 # 既存UIの多重起動防止
 # ============================================================
 def close_existing_ui():
-    for w in QtWidgets.QApplication.allWidgets():
-        if w.objectName() == WINDOW_OBJECT_NAME:
-            try:
-                w.close()
-                w.deleteLater()
-            except Exception:
-                pass
+    ptr = omui.MQtUtil.findWindow(WINDOW_OBJECT_NAME)
+    if ptr:
+        widget = wrapInstance(int(ptr), QtWidgets.QWidget)
+        try:
+            widget.close()
+            widget.deleteLater()
+        except Exception:
+            pass
+
 
 
 # ============================================================
