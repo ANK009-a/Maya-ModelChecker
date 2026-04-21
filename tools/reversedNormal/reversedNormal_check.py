@@ -19,11 +19,7 @@ def _short_name(dag_path):
     return dag_path.rsplit("|", 1)[-1] if "|" in dag_path else dag_path
 
 
-def _is_intermediate(shape):
-    try:
-        return bool(cmds.getAttr(f"{shape}.intermediateObject"))
-    except Exception:
-        return False
+from _util import iter_scene_mesh_shapes as _iter_shapes
 
 
 def _find_reversed_faces(shape):
@@ -109,11 +105,9 @@ def _find_reversed_faces(shape):
 
 def get_results():
     results = []
-    shapes = cmds.ls(type="mesh", long=True) or []
+    shapes = _iter_shapes()
     for shape in shapes:
         if not cmds.objExists(shape):
-            continue
-        if _is_intermediate(shape):
             continue
         parents = cmds.listRelatives(shape, parent=True, fullPath=True) or []
         parent = parents[0] if parents else shape

@@ -16,14 +16,7 @@ UI連携（assetChecker想定）:
 from __future__ import annotations
 
 import maya.cmds as cmds
-
-
-def _is_intermediate(shape: str) -> bool:
-    """中間オブジェクト判定"""
-    try:
-        return bool(cmds.getAttr(f"{shape}.intermediateObject"))
-    except Exception:
-        return False
+from _util import iter_scene_mesh_shapes as _iter_shapes
 
 
 def _parent_transform_short(shape: str) -> str:
@@ -49,12 +42,9 @@ def _get_color_sets(shape: str) -> list[str]:
 def get_results() -> list[dict]:
     results: list[dict] = []
 
-    # mesh shape を全件対象
-    shapes = cmds.ls(type="mesh", long=True) or []
+    shapes = _iter_shapes()
 
     for shape in shapes:
-        if _is_intermediate(shape):
-            continue
 
         color_sets = _get_color_sets(shape)
         if not color_sets:

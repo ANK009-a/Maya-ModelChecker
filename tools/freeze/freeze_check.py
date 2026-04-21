@@ -15,9 +15,9 @@ freeze_check_allScene.py
 """
 
 import maya.cmds as cmds
+from _util import iter_scene_mesh_shapes as _iter_scene_mesh_shapes
 
 TOL = 1e-6  # 許容誤差（必要なら 1e-4 などに）
-
 
 
 def _short_name(dag_path: str) -> str:
@@ -30,29 +30,6 @@ def _neq(a, b, tol=TOL):
 
 def _vec_not_equal(v, target, tol=TOL):
     return any(_neq(v[i], target[i], tol) for i in range(3))
-
-
-def _is_intermediate(shape: str) -> bool:
-    try:
-        return bool(cmds.getAttr(shape + ".intermediateObject"))
-    except Exception:
-        return False
-
-
-def _iter_scene_mesh_shapes():
-    """
-    シーン内 mesh shape を全件取得（可能なら intermediate を列挙段階で除外）
-    """
-    for kwargs in ({"ni": True}, {"noIntermediate": True}):
-        try:
-            return cmds.ls(type="mesh", long=True, **kwargs) or []
-        except TypeError:
-            pass
-        except Exception:
-            pass
-
-    meshes = cmds.ls(type="mesh", long=True) or []
-    return [m for m in meshes if cmds.objExists(m) and not _is_intermediate(m)]
 
 
 def _mesh_parent_transforms():

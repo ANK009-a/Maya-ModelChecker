@@ -111,6 +111,9 @@ def _ensure_util_module():
 def load_and_run(folder, script_name):
     """スクリプトを取得して exec し、構造化結果または stdout テキストを返す"""
     _ensure_util_module()
+    util_mod = sys.modules.get("_util")
+    if util_mod and cmds:
+        util_mod._checker_selection = cmds.ls(sl=True, long=True) or []
     code = fetch_script(folder, script_name)
     if code is None:
         return None, ""

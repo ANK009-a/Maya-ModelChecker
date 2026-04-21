@@ -32,11 +32,7 @@ def _parent_transform(shape: str) -> str:
     return p[0] if p else shape
 
 
-def _is_intermediate(shape: str) -> bool:
-    try:
-        return bool(cmds.getAttr(f"{shape}.intermediateObject"))
-    except Exception:
-        return False
+from _util import iter_scene_mesh_shapes as _iter_shapes
 
 
 def _is_referenced(node: str) -> bool:
@@ -59,11 +55,9 @@ def get_results():
     if om2 is None:
         return results
 
-    shapes = cmds.ls(type="mesh", long=True) or []
+    shapes = _iter_shapes()
     for shape in shapes:
         if not cmds.objExists(shape):
-            continue
-        if _is_intermediate(shape):
             continue
 
         parent = _parent_transform(shape)

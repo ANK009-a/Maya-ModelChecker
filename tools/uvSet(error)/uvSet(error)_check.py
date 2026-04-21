@@ -23,11 +23,7 @@ import maya.cmds as cmds
 REQUIRED_UVSET = "map1"  # 使わないが、将来の表示用に残してもOK
 
 
-def _is_intermediate(shape: str) -> bool:
-    try:
-        return bool(cmds.getAttr(f"{shape}.intermediateObject"))
-    except Exception:
-        return False
+from _util import iter_scene_mesh_shapes as _iter_shapes
 
 
 def _parent_transform(shape: str) -> str:
@@ -47,11 +43,6 @@ def _is_referenced(node: str) -> bool:
         return bool(cmds.referenceQuery(node, isNodeReferenced=True))
     except Exception:
         return False
-
-
-def _iter_target_meshes():
-    """シーン全体の mesh shape を返す（check は常にシーン全体を対象にする）"""
-    return cmds.ls(type="mesh", long=True) or []
 
 
 def _get_visible_uv_sets(shape: str):
@@ -100,12 +91,10 @@ def _get_uvset_points_size(shape: str, i: int):
 
 def get_results():
     results = []
-    shapes = _iter_target_meshes()
+    shapes = _iter_shapes()
 
     for shape in shapes:
         if not cmds.objExists(shape):
-            continue
-        if _is_intermediate(shape):
             continue
 
         # 参照は基本スキップ（事故防止＆取得できても扱いが難しいため）
