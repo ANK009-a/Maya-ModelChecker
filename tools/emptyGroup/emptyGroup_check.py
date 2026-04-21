@@ -39,7 +39,7 @@ def get_results():
         incoming = cmds.listConnections(tr, s=True, d=False) or []
         outgoing = cmds.listConnections(tr, s=False, d=True) or []
 
-        details = [f"フルパス: {tr}"]
+        details = []
         if incoming or outgoing:
             details.append(
                 f"⚠ 接続あり (in={len(incoming)}, out={len(outgoing)}) — 削除前に確認してください"

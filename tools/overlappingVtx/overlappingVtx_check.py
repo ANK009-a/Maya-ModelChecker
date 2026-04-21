@@ -78,7 +78,6 @@ def get_results():
         details = [
             f"重複頂点数: {len(overlapping)} 個",
             f"閾値: {THRESHOLD}",
-            f"Shape: {shape}",
             f"サンプル (最大 {MAX_SHOW}):",
         ]
         for vi in overlapping[:MAX_SHOW]:

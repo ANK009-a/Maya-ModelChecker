@@ -65,7 +65,6 @@ def get_results():
             "transform": n,  # 左一覧でノード名がそのまま見えるように
             "message": f"animCurve: {n} ({t})",
             "details": [
-                f"Node: {n}",
                 f"Type: {t}",
             ],
         })

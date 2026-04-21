@@ -64,7 +64,6 @@ def get_results():
         shape_short = _short_name(shape)
 
         details = [
-            f"Shape: {shape}",
             f"Isolated vertex count: {len(isolated)}",
             "Samples:",
             "  - " + ", ".join(f"vtx[{i}]" for i in isolated[:MAX_SHOW]),

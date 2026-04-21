@@ -50,7 +50,6 @@ def get_results():
                 "message": f"非表示オブジェクト: {parent_short}",
                 "details": [
                     f"visibility: {vis}",
-                    f"フルパス: {parent}",
                     "correct で表示状態に戻す（削除はユーザーが判断してください）",
                 ],
             })

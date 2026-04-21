@@ -172,7 +172,6 @@ def get_results():
             continue
 
         details = [
-            f"Shape: {shape}",
             f"Tweaked vertex count: {count}",
             f"Samples (max {MAX_SHOW}):",
         ]

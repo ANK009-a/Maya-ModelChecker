@@ -142,7 +142,6 @@ def get_results():
         shape_short = _short_name(shape)
 
         details = [
-            f"Shape: {shape}",
             "Out of 0-1 UV sets:",
         ]
         for uv_set, info in bad_sets:

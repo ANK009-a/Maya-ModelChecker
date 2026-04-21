@@ -119,7 +119,6 @@ def get_results():
         shape_short = _short_name(shape)
 
         details = [
-            f"Shape: {shape}",
             "Visible(UV Set Editor): " + (", ".join(visible) if visible else "(none)"),
             "Hidden-with-UV (uvSet index / name / uvCount):",
         ]

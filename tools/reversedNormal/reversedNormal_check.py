@@ -123,7 +123,6 @@ def get_results():
 
         details = [
             f"反転フェース数: {len(reversed_faces)} / {n_faces}",
-            f"Shape: {shape}",
             f"サンプル (最大 {MAX_SHOW}):",
         ]
         for fi in reversed_faces[:MAX_SHOW]:
