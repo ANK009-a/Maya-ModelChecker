@@ -523,9 +523,18 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
             btn.doubleClicked.connect(lambda f=folder: self.run_check(f, show_details=True))
             title = entry.get("title", folder)
             desc  = entry.get("description", "")
+            ver   = entry.get("version", "")
             if title or desc:
+                ver_html = (
+                    f"<td align='right' valign='bottom'>"
+                    f"<span style='font-size:9px; color:#6a89a8;'>v{ver}</span></td>"
+                    if ver else ""
+                )
                 btn.setToolTip(
-                    f"<b style='font-size:13px;'>{title}</b>"
+                    f"<table width='100%' cellspacing='0' cellpadding='0'><tr>"
+                    f"<td><b style='font-size:13px;'>{title}</b></td>"
+                    f"{ver_html}"
+                    f"</tr></table>"
                     f"<hr style='border:1px solid #3a6488; margin:4px 0;'>"
                     f"<span style='line-height:1.6;'>{desc}</span>"
                 )
