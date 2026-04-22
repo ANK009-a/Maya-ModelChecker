@@ -3,13 +3,13 @@
 animationKey_check.py
 
 check処理:
-シーン内のアニメーションカーブノード（animCurve*）をリストします（選択不要）
+シーン内のアニメーション系ノード（animCurve* / animLayer）をリストします。
 
 対象:
-- animCurveTA / animCurveTL / animCurveTT
-- animCurveUA / animCurveUL / animCurveUT
-- animCurveTU
-（= nodeType が "animCurve" で始まるもの全て）
+- animCurve*: animCurveTA / TL / TT / UA / UL / UT / TU / UU
+  （選択がある場合は、その配下に接続された animCurve のみ対象）
+- animLayer: BaseAnimation を含む全 animLayer ノード
+  （シーン全体状態のため選択に関係なく常に全件対象）
 
 checkList.py 連携想定:
 - get_results() が list[dict] を返す（無ければ []）
@@ -43,9 +43,15 @@ def _anim_curves_for_selection(sel):
     return uniq
 
 
+def _anim_layers():
+    """シーン内の animLayer ノード（BaseAnimation 含む）を返す。"""
+    return cmds.ls(type="animLayer") or []
+
+
 def get_results():
     results = []
 
+    # --- animCurve（選択に応じて絞り込み） ---
     sel = _checker_selection()
     if sel:
         raw = _anim_curves_for_selection(sel)
@@ -54,19 +60,27 @@ def get_results():
         raw = cmds.ls(type=_ANIM_TYPES, long=True) or []
     anim_curves = [(n, cmds.nodeType(n)) for n in raw if cmds.objExists(n)]
 
-    if not anim_curves:
-        return []
-
     # 見やすいよう type -> name でソート
     anim_curves.sort(key=lambda x: (x[1], x[0]))
 
     for n, t in anim_curves:
         results.append({
-            "transform": n,  # 左一覧でノード名がそのまま見えるように
+            "transform": n,
             "message": f"animCurve: {n} ({t})",
             "details": [
                 f"Type: {t}",
             ],
+        })
+
+    # --- animLayer（常にシーン全体が対象） ---
+    for n in sorted(_anim_layers()):
+        details = [f"Type: animLayer"]
+        if n == "BaseAnimation":
+            details.append("※ BaseAnimation を削除すると配下の animLayer も全削除されます")
+        results.append({
+            "transform": n,
+            "message": f"animLayer: {n}",
+            "details": details,
         })
 
     return results

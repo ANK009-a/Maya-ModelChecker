@@ -1,5 +1,5 @@
 ﻿[
-  {"folder": "animationKey",   "title": "Animation Key",        "description": "アニメーションキーが残っているノードを検出します。",                                                                  "has_fix": false, "version": "1.0.0"},
+  {"folder": "animationKey",   "title": "Animation Key",        "description": "アニメーションキー（animCurve）と animLayer（BaseAnimation 含む）を検出します。",                                      "has_fix": true,  "version": "1.1.0"},
   {"folder": "colorSet",       "title": "Color Set",            "description": "カラーセットを持つ mesh を検出します。",                                                                              "has_fix": true,  "version": "1.0.0"},
   {"folder": "emptyGroup",     "title": "Empty Group",          "description": "子オブジェクトも shape も持たない空のグループ transform を検出します。",                                            "has_fix": true,  "version": "1.0.0"},
   {"folder": "freeze",         "title": "Freeze Transform",     "description": "移動・回転・スケール値がフリーズされていない transform を検出します。",                                             "has_fix": true,  "version": "1.0.0"},
