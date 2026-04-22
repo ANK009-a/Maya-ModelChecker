@@ -9,10 +9,7 @@ pivot_check_allScene_shortName_nodup.py
 """
 
 import maya.cmds as cmds
-from _util import (
-    iter_unique_mesh_parents as _iter_unique_mesh_parents,
-    short_name as _short_name,
-)
+from _util import iter_unique_mesh_parents as _iter_unique_mesh_parents
 
 TOLERANCE = 1e-6  # 許容誤差（必要なら 1e-4 などに）
 
@@ -29,7 +26,6 @@ def get_results():
         return results
 
     for tr in transforms:
-        tr_short = _short_name(tr)
         try:
             rp = cmds.xform(tr, q=True, ws=True, rp=True)  # [x, y, z]
             sp = cmds.xform(tr, q=True, ws=True, sp=True)
@@ -47,14 +43,14 @@ def get_results():
                 msg_parts.append(f"ScalePivot: ({sp[0]:.6f}, {sp[1]:.6f}, {sp[2]:.6f})")
 
             results.append({
-                "transform": tr_short,
+                "transform": tr,
                 "message": " / ".join(msg_parts),
                 # details は付けない（重複表示防止）
             })
 
         except Exception as e:
             results.append({
-                "transform": tr_short,
+                "transform": tr,
                 "message": f"Pivot取得エラー: {e}"
             })
 

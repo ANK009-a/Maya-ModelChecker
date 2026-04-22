@@ -42,9 +42,9 @@ def get_results() -> list[dict]:
         if not color_sets:
             continue
 
-        parent_short = _short_name(_parent_transform(shape))
+        parent = _parent_transform(shape)
         results.append({
-            "transform": parent_short,
+            "transform": parent,
             "message": f"カラーセット {len(color_sets)} 件",
             "details": color_sets,
         })

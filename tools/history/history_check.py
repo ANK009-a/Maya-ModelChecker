@@ -24,10 +24,7 @@ IGNORE_TYPES = frozenset([
 ])
 
 
-from _util import (
-    iter_scene_mesh_shapes as _iter_shapes,
-    short_name as _short_name,
-)
+from _util import iter_scene_mesh_shapes as _iter_shapes
 
 
 def get_results():
@@ -43,7 +40,6 @@ def get_results():
         if parent in seen_parents:
             continue
         seen_parents.add(parent)
-        parent_short = _short_name(parent)
 
         history = cmds.listHistory(shape, pruneDagObjects=True) or []
         history = [
@@ -69,7 +65,7 @@ def get_results():
                 details.append(f"  [{cmds.nodeType(h)}] {h}")
 
         results.append({
-            "transform": parent_short,
+            "transform": parent,
             "message": f"ヒストリー残留 (poly:{len(poly_ops)}, deformer:{len(deformers)})",
             "details": details,
         })

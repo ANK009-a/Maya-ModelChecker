@@ -131,7 +131,7 @@ def get_results():
                 details.append(f"  - [{i}] {n}")
 
         results.append({
-            "transform": parent_short,
+            "transform": parent,
             "message": f"UVSet(非表示だがUV保持): {shape_short}（{len(hidden_with_uv)} sets）",
             "details": details,
         })

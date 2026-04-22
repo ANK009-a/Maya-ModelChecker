@@ -84,7 +84,7 @@ def get_results():
             details.append(f"  vtx[{vi}]")
 
         results.append({
-            "transform": parent_short,
+            "transform": parent,
             "message": f"重複頂点 ({len(overlapping)} 個)",
             "details": details,
         })

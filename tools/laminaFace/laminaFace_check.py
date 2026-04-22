@@ -20,7 +20,7 @@ def get_results():
             for line in lamina[:15]:
                 details.append(f"  {line.strip()}")
             results.append({
-                "transform": parent_short,
+                "transform": parent,
                 "message": f"ラミナフェース ({len(lamina)} 面)",
                 "details": details,
             })

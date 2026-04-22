@@ -152,9 +152,8 @@ def get_results() -> list[dict]:
         if not details:
             details = ["(none)"]
 
-        transform_key = _short_name(_parent_transform(shape))
         results.append({
-            "transform": transform_key,
+            "transform": _parent_transform(shape),
             "message": f"UVSet({', '.join(issues)})",
             "details": details,
         })

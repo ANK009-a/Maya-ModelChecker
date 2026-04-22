@@ -38,7 +38,7 @@ def get_results():
             continue
 
         results.append({
-            "transform": parent_short,
+            "transform": parent,
             "message": f"Shape名不一致: {parent_short} / {shape_short}（expected: {expected}）",
             "details": [
                 f"Transform: {parent}",

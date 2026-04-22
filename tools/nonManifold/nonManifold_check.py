@@ -28,7 +28,7 @@ def get_results():
                 for line in nm_verts[:10]:
                     details.append(f"  {line.strip()}")
             results.append({
-                "transform": parent_short,
+                "transform": parent,
                 "message": f"非マニフォールド検出 (edge:{len(nm_edges)}, vtx:{len(nm_verts)})",
                 "details": details,
             })

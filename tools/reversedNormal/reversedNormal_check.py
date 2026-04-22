@@ -111,7 +111,7 @@ def get_results():
         n_faces = cmds.polyEvaluate(shape, f=True) or 0
         if n_faces > MAX_FACES_PER_MESH:
             results.append({
-                "transform": parent_short,
+                "transform": parent,
                 "message": f"スキップ（フェース数 {n_faces} > {MAX_FACES_PER_MESH}）",
                 "details": ["フェース数が多すぎます。Maya の Mesh > Cleanup を使用してください。"],
             })
@@ -129,7 +129,7 @@ def get_results():
             details.append(f"  f[{fi}]")
 
         results.append({
-            "transform": parent_short,
+            "transform": parent,
             "message": f"法線反転フェース ({len(reversed_faces)} 面)",
             "details": details,
         })

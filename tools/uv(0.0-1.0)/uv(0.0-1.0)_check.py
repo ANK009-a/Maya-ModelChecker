@@ -153,7 +153,7 @@ def get_results():
             )
 
         results.append({
-            "transform": parent_short,
+            "transform": parent,
             "message": f"UV範囲外(0-1): {shape_short}（{len(bad_sets)} uvSets）",
             "details": details,
         })

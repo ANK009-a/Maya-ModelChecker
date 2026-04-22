@@ -46,7 +46,7 @@ def get_results():
             )
 
         results.append({
-            "transform": short,
+            "transform": tr,
             "message": "空グループ",
             "details": details,
         })

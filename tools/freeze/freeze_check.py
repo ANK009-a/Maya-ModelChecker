@@ -15,10 +15,7 @@ freeze_check_allScene.py
 """
 
 import maya.cmds as cmds
-from _util import (
-    iter_unique_mesh_parents as _iter_unique_mesh_parents,
-    short_name as _short_name,
-)
+from _util import iter_unique_mesh_parents as _iter_unique_mesh_parents
 
 TOL = 1e-6  # 許容誤差（必要なら 1e-4 などに）
 
@@ -40,7 +37,6 @@ def get_results():
         return results
 
     for tr in transforms:
-        tr_short = _short_name(tr)
         try:
             # ローカル値で判定（必要なら ws=True の xform に切り替え可）
             t = cmds.getAttr(tr + ".translate")[0]  # (x,y,z)
@@ -61,13 +57,13 @@ def get_results():
                     parts.append(f"スケール: ({s[0]:.3f}, {s[1]:.3f}, {s[2]:.3f})")
 
                 results.append({
-                    "transform": tr_short,
+                    "transform": tr,
                     "message": " / ".join(parts)
                 })
 
         except Exception as e:
             results.append({
-                "transform": tr_short,
+                "transform": tr,
                 "message": f"TRS取得エラー: {e}"
             })
 

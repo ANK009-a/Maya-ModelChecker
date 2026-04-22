@@ -72,7 +72,7 @@ def get_results():
             details.append(f"  ... (+{len(isolated) - MAX_SHOW})")
 
         results.append({
-            "transform": parent_short,
+            "transform": parent,
             "message": f"孤立頂点あり: {shape_short}（{len(isolated)} vtx）",
             "details": details,
         })

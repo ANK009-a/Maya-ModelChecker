@@ -686,12 +686,44 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
             self.detail_view.setPlainText("\n".join(details))
         self._apply_maya_selection_for_key(key, details)
 
+    @staticmethod
+    def _disambiguate_keys(keys):
+        """
+        long path のリストから「最小限で一意になる表示名」へのマップを返す。
+        例:
+          ["|grp_A|pCube1", "|grp_B|pCube1", "animCurveTA1"]
+          → {"|grp_A|pCube1": "grp_A | pCube1",
+              "|grp_B|pCube1": "grp_B | pCube1",
+              "animCurveTA1":   "animCurveTA1"}
+        """
+        result = {}
+        for path in keys:
+            parts = path.lstrip("|").split("|")
+            for n in range(1, len(parts) + 1):
+                suffix = "|" + "|".join(parts[-n:])
+                # 他のパスがこの suffix で終わるなら衝突 → 階層を増やす
+                collide = any(
+                    other != path and other.endswith(suffix)
+                    for other in keys
+                )
+                if not collide:
+                    result[path] = " | ".join(parts[-n:])
+                    break
+            else:
+                result[path] = path
+        return result
+
     def set_object_results(self, obj_to_details):
         self.object_to_details = obj_to_details or {}
         self.object_list.clear()
-        for key in sorted(self.object_to_details.keys()):
-            item = QtWidgets.QListWidgetItem(key)
-            item.setData(QtCore.Qt.UserRole, key)
+        keys = list(self.object_to_details.keys())
+        display_map = self._disambiguate_keys(keys)
+        # 表示名でソート（同名衝突時は階層名が頭に付くので自然な並び）
+        keys.sort(key=lambda k: display_map.get(k, k))
+        for key in keys:
+            display = display_map.get(key, key)
+            item = QtWidgets.QListWidgetItem(display)
+            item.setData(QtCore.Qt.UserRole, key)  # 内部キーは long path のまま
             self.object_list.addItem(item)
         if self.object_list.count() > 0:
             self.object_list.setCurrentRow(0)

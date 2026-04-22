@@ -35,7 +35,7 @@ def get_results():
         neg = [axis for axis, val in zip("XYZ", s) if val < -TOL]
         if neg:
             results.append({
-                "transform": parent_short,
+                "transform": parent,
                 "message": (
                     f"マイナススケール: {parent_short} "
                     f"({s[0]:.3f}, {s[1]:.3f}, {s[2]:.3f}) 軸:{', '.join(neg)}"

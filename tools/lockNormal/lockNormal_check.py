@@ -134,7 +134,6 @@ def get_results():
     results = []
 
     for tr, mesh_shapes in tr_to_shapes.items():
-        tr_short = _short_name(tr)
         locked_infos = []
         last_err = None
         err_count = 0
@@ -155,14 +154,14 @@ def get_results():
 
         if locked_infos:
             results.append({
-                "transform": tr_short,
+                "transform": tr,
                 "message": " / ".join(locked_infos)
             })
         else:
             # すべて失敗した場合のみエラーとして返す（不要ならこのブロックを削除）
             if last_err and err_count == len(mesh_shapes):
                 results.append({
-                    "transform": tr_short,
+                    "transform": tr,
                     "message": f"法線ロック判定エラー: {last_err}"
                 })
 

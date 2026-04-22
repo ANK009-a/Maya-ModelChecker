@@ -179,7 +179,7 @@ def get_results():
             details.append(f"  - vtx[{i}] pnts=({v[0]:.6f}, {v[1]:.6f}, {v[2]:.6f})")
 
         results.append({
-            "transform": parent_short,
+            "transform": parent,
             "message": f"頂点移動履歴あり: {shape_short}（{count} vtx）",
             "details": details,
         })
