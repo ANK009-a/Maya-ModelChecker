@@ -3,6 +3,7 @@ import io
 import contextlib
 import re
 import json
+import html
 import urllib.request
 import types
 import sys
@@ -30,7 +31,7 @@ def maya_main_window():
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 GITHUB_API_INDEX    = f"{GITHUB_RAW}/tools/manifest_index.json"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.0.0"
+LAUNCHER_VERSION    = "1.1.0"
 LEFT_W = 168   # 左パネル（チェックボタン列）の幅
 BTN_H  = 26    # チェックボタンの高さ
 FIX_W  = 40    # FIX ボタンの幅
@@ -660,8 +661,57 @@ QPushButton:disabled { background-color: #1e3028; color: #4a6858; }
             return
         details = self.object_to_details.get(key, [])
         if details:
-            self.detail_view.setPlainText("\n".join(details))
+            self.detail_view.setHtml(self._format_details_html(details))
         self._apply_maya_selection_for_key(key, details)
+
+    @staticmethod
+    def _format_details_html(details):
+        """details リストを見やすい HTML に整形する。
+        - 1 行目（message）: 強調見出し
+        - ⚠ で始まる行: 警告色（アンバー）
+        - インデント行（先頭スペース2文字以上）: モノスペースでサンプル/座標を整列表示
+        - "key: value" 形式: ラベルと値を色分け
+        - その他: 通常テキスト
+        """
+        if not details:
+            return ""
+        out = []
+        for i, raw in enumerate(details):
+            text = html.escape(str(raw))
+            if i == 0:
+                out.append(
+                    f"<div style='font-weight:bold; color:#7aa3d0;"
+                    f" font-size:13px; margin-bottom:8px;'>{text}</div>"
+                )
+                continue
+            stripped = str(raw).lstrip()
+            leading = len(str(raw)) - len(stripped)
+            if stripped.startswith("⚠"):
+                out.append(
+                    f"<div style='color:#e0b060; padding:1px 0;'>{text}</div>"
+                )
+                continue
+            if leading >= 2:
+                indent_px = leading * 4
+                out.append(
+                    f"<div style='font-family:Consolas,monospace; color:#a0c4e0;"
+                    f" padding:1px 0 1px {indent_px}px; white-space:pre;'>"
+                    f"{html.escape(stripped)}</div>"
+                )
+                continue
+            if ": " in text:
+                k, _, v = text.partition(": ")
+                out.append(
+                    f"<div style='padding:1px 0;'>"
+                    f"<span style='color:#7a9aae;'>{k}:</span> "
+                    f"<span style='color:#ccddef; font-family:Consolas,monospace;'>{v}</span>"
+                    f"</div>"
+                )
+                continue
+            out.append(
+                f"<div style='padding:1px 0; color:#ccddef;'>{text}</div>"
+            )
+        return "".join(out)
 
     @staticmethod
     def _disambiguate_keys(keys):

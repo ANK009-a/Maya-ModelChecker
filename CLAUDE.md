@@ -132,9 +132,20 @@ def get_results():
 
 ## ランチャーバージョン
 ```python
-LAUNCHER_VERSION = "1.0.0"  # assetChecker.py 上部
+LAUNCHER_VERSION = "1.1.0"  # assetChecker.py 上部
 ```
-ステータスバー右下に `v1.0.0` として表示される。assetChecker.py 本体を編集したらこの値をバンプする。
+ステータスバー右下に `v1.1.0` として表示される。assetChecker.py 本体を編集したらこの値をバンプする。
+
+## 詳細表示の HTML 整形
+右パネルの詳細ビュー（`detail_view`）は `_format_details_html()` で HTML 化される：
+- 1 行目（`message`）: 太字見出し（カテゴリ色 `#7aa3d0`、13px）
+- `⚠` で始まる行: 警告色（アンバー `#e0b060`）
+- 先頭スペース 2 文字以上のインデント行: モノスペース（座標・サンプル整列用）
+- `key: value` 形式: ラベルと値を色分け
+- その他: 通常テキスト
+
+check / fix スクリプト側で details に `⚠` プレフィックス・インデント・`key: value` 形式を使うと
+自動で整形される。
 
 ## ウィンドウサイズ
 ```python
