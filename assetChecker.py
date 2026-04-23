@@ -31,7 +31,7 @@ def maya_main_window():
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 GITHUB_API_INDEX    = f"{GITHUB_RAW}/tools/manifest_index.json"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.2.0"
+LAUNCHER_VERSION    = "1.2.1"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタン / トップバーボタンの高さ
 FIX_W        = 38   # FIX ボタンの幅
@@ -762,6 +762,13 @@ QFrame#statusBar {
             self._category_widgets[cat]["folders"].append(folder)
 
         self.rows_layout.addStretch()
+
+        # 起動時は全カテゴリ折り畳み状態
+        for info in self._category_widgets.values():
+            info["header"].setCollapsed(True)
+            for row in info["rows"]:
+                row.setVisible(False)
+
         self._update_status_bar()
 
     # ----------------------------------------------------------

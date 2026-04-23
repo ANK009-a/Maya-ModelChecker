@@ -132,9 +132,9 @@ def get_results():
 
 ## ランチャーバージョン
 ```python
-LAUNCHER_VERSION = "1.2.0"  # assetChecker.py 上部
+LAUNCHER_VERSION = "1.2.1"  # assetChecker.py 上部
 ```
-ステータスバー右下に `v1.2.0` として表示される。assetChecker.py 本体を編集したらこの値をバンプする。
+ステータスバー右下に `v1.2.1` として表示される。assetChecker.py 本体を編集したらこの値をバンプする。
 
 ## 詳細表示の HTML 整形
 右パネルの詳細ビュー（`detail_view`）は `_format_details_html()` で HTML 化される：
@@ -179,7 +179,7 @@ QDialog (bg #060c18)
 ## カテゴリ折り畳み
 - `_CategoryHeader` クリックでそのカテゴリの全ツール行を表示/非表示切替
 - 矢印 `▾`（展開）/ `▸`（折り畳み）
-- 起動時は全カテゴリ展開状態
+- 起動時は全カテゴリ折り畳み状態
 - ヘッダー右端に **エラー件数バッジ**（カテゴリ内の合計エラー件数、0 件なら非表示）
 
 ## ツールボタン構造
