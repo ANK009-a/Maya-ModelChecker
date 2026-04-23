@@ -59,10 +59,29 @@ GitHub (raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main)
 | フィールド | 型 | 説明 |
 |------------|-----|------|
 | `folder` | string | tools/ 配下フォルダ名（スクリプトファイル名のプレフィックスにもなる） |
+| `category` | string | カテゴリ名（例: `"Transform 系"`）。ツールチップ右下に表示 |
 | `title` | string | UI ツールチップタイトル |
 | `description` | string | ツールチップ本文（HTML 可） |
 | `has_fix` | bool | FIX ボタンを出すか（`_fix.py` の存在） |
-| `version` | string | semver。ツールチップ右下に `v1.0.1` 表示 |
+| `version` | string | semver。ツールチップ右下に `v1.0.1` 表示（カテゴリの右隣） |
+
+### ツール並び順ルール
+作業フローに沿った **カテゴリ順** で配置する。各カテゴリ間は JSON 上に空行を入れて視認性を上げる
+（パーサーは空行を無視するため動作には影響しない）。
+
+| 順 | カテゴリ | 含まれるツール |
+|----|---------|---------------|
+| 1 | **Transform 系** | emptyGroup → hiddenObject → freeze → pivot → negativeScale |
+| 2 | **Mesh 形状系** | nonManifold → laminaFace → reversedNormal → isolateVtx → overlappingVtx |
+| 3 | **Mesh 属性系** | history → vtxTweak → lockNormal → colorSet → meshShapeName |
+| 4 | **UV 系** | uv(0.0-1.0) → uvSet(extra) → uvSet(error) |
+| 5 | **テクスチャ系** | texturePath |
+| 6 | **シーン系** | nameCollision → animationKey |
+
+新ツールを追加する際は適切なカテゴリの末尾に追加する。カテゴリ自体を新設する場合は
+作業フロー上の位置を判断して挿入し、CLAUDE.md のこの表も更新する。
+
+並び替えのみの編集でも全ツールの version をバンプする（バージョン管理ルール参照）。
 
 ## check.py / fix.py インターフェース規約
 

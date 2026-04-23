@@ -524,16 +524,22 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
             title = entry.get("title", folder)
             desc  = entry.get("description", "")
             ver   = entry.get("version", "")
+            cat   = entry.get("category", "")
             if title or desc:
-                ver_html = (
+                meta_parts = []
+                if cat:
+                    meta_parts.append(f"<span style='color:#7aa3d0;'>{cat}</span>")
+                if ver:
+                    meta_parts.append(f"<span style='color:#6a89a8;'>v{ver}</span>")
+                meta_html = (
                     f"<td align='right' valign='bottom'>"
-                    f"<span style='font-size:9px; color:#6a89a8;'>v{ver}</span></td>"
-                    if ver else ""
+                    f"<span style='font-size:9px;'>{'  '.join(meta_parts)}</span></td>"
+                    if meta_parts else ""
                 )
                 btn.setToolTip(
                     f"<table width='100%' cellspacing='0' cellpadding='0'><tr>"
                     f"<td><b style='font-size:13px;'>{title}</b></td>"
-                    f"{ver_html}"
+                    f"{meta_html}"
                     f"</tr></table>"
                     f"<hr style='border:1px solid #3a6488; margin:4px 0;'>"
                     f"<span style='line-height:1.6;'>{desc}</span>"
