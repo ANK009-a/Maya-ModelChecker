@@ -31,10 +31,10 @@ def maya_main_window():
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 GITHUB_API_INDEX    = f"{GITHUB_RAW}/tools/manifest_index.json"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.1.0"
-LEFT_W = 168   # 左パネル（チェックボタン列）の幅
-BTN_H  = 26    # チェックボタンの高さ
-FIX_W  = 40    # FIX ボタンの幅
+LAUNCHER_VERSION    = "1.2.0"
+LEFT_PANEL_W = 204  # 左パネル全体の幅
+BTN_H        = 28   # ツールボタン / トップバーボタンの高さ
+FIX_W        = 38   # FIX ボタンの幅
 
 _script_cache = {}  # { "folder/script.py": "コード文字列" }
 
@@ -97,6 +97,130 @@ class _InstantTooltipFilter(QtCore.QObject):
         elif event.type() == QtCore.QEvent.Leave:
             QtWidgets.QToolTip.hideText()
         return False
+
+
+# ============================================================
+# ツールボタン（名前ラベル + 件数バッジを内包）
+# ============================================================
+class _ToolButton(_DoubleClickButton):
+    """名前ラベルと件数バッジ（pill）を内包するダブルクリック対応ボタン。
+    QPushButton 自体の text は使わず、子 QLabel をマウス透過で配置する。"""
+    def __init__(self, parent=None):
+        super().__init__("", parent)
+        self.setMinimumWidth(1)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+
+        lay = QtWidgets.QHBoxLayout(self)
+        lay.setContentsMargins(8, 0, 6, 0)
+        lay.setSpacing(4)
+
+        self._name_lbl = QtWidgets.QLabel("")
+        self._name_lbl.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
+        self._name_lbl.setStyleSheet("background: transparent; color: #4878a0; font-size: 11px;")
+
+        self._badge_lbl = QtWidgets.QLabel("")
+        self._badge_lbl.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
+        self._badge_lbl.setStyleSheet(
+            "background: #3a1010; color: #e05858; border-radius: 3px;"
+            " padding: 1px 5px; font-size: 10px;"
+        )
+        self._badge_lbl.setVisible(False)
+
+        lay.addWidget(self._name_lbl, 1)
+        lay.addWidget(self._badge_lbl, 0)
+
+    def setName(self, text, color=None):
+        self._name_lbl.setText(text)
+        if color:
+            self._name_lbl.setStyleSheet(
+                f"background: transparent; color: {color}; font-size: 11px;"
+            )
+
+    def setBadge(self, text, visible=True):
+        if visible and text:
+            self._badge_lbl.setText(str(text))
+            self._badge_lbl.setVisible(True)
+        else:
+            self._badge_lbl.setVisible(False)
+
+
+# ============================================================
+# カテゴリーヘッダー（折り畳み可能 + 件数バッジ）
+# ============================================================
+class _CategoryHeader(QtWidgets.QWidget):
+    """カテゴリ名・矢印・件数バッジを表示するクリック可能ヘッダー"""
+    clicked = QtCore.Signal()
+
+    def __init__(self, name, parent=None):
+        super().__init__(parent)
+        self._collapsed = False
+        self.setCursor(QtCore.Qt.PointingHandCursor)
+        self.setObjectName("catHeader")
+        self.setStyleSheet(
+            "QWidget#catHeader { border-bottom: 1px solid #142030; background: transparent; }"
+        )
+
+        lay = QtWidgets.QHBoxLayout(self)
+        lay.setContentsMargins(6, 6, 6, 3)
+        lay.setSpacing(5)
+
+        self._arrow_lbl = QtWidgets.QLabel("▾")
+        self._arrow_lbl.setStyleSheet(
+            "color: #2a5070; font-size: 9px; background: transparent;"
+        )
+        self._arrow_lbl.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
+
+        self._name_lbl = QtWidgets.QLabel(name.upper())
+        self._name_lbl.setStyleSheet(
+            "color: #3a6888; font-size: 10px; background: transparent;"
+            " letter-spacing: 1px; font-weight: 600;"
+        )
+        self._name_lbl.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
+
+        self._badge_lbl = QtWidgets.QLabel("")
+        self._badge_lbl.setStyleSheet(
+            "background: #3a1010; color: #e05858; border-radius: 3px;"
+            " padding: 1px 6px; font-size: 10px;"
+        )
+        self._badge_lbl.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
+        self._badge_lbl.setVisible(False)
+
+        lay.addWidget(self._arrow_lbl, 0)
+        lay.addWidget(self._name_lbl, 1)
+        lay.addWidget(self._badge_lbl, 0)
+
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(event)
+
+    def enterEvent(self, event):
+        self._name_lbl.setStyleSheet(
+            "color: #5a98c0; font-size: 10px; background: transparent;"
+            " letter-spacing: 1px; font-weight: 600;"
+        )
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self._name_lbl.setStyleSheet(
+            "color: #3a6888; font-size: 10px; background: transparent;"
+            " letter-spacing: 1px; font-weight: 600;"
+        )
+        super().leaveEvent(event)
+
+    def setCollapsed(self, collapsed):
+        self._collapsed = collapsed
+        self._arrow_lbl.setText("▸" if collapsed else "▾")
+
+    def isCollapsed(self):
+        return self._collapsed
+
+    def setBadge(self, count):
+        if count > 0:
+            self._badge_lbl.setText(str(count))
+            self._badge_lbl.setVisible(True)
+        else:
+            self._badge_lbl.setVisible(False)
 
 
 # ============================================================
@@ -205,136 +329,184 @@ class assetChecker(QtWidgets.QDialog):
     # ----------------------------------------------------------
     _SS_DIALOG = """
 QDialog#assetChecker {
-    background-color: #1c2b3a;
-}
-QScrollArea {
-    background-color: #162030;
-    border: none;
-}
-QScrollArea > QWidget > QWidget {
-    background-color: #162030;
-}
-QListWidget {
-    background-color: #162030;
-    color: #a0b4c8;
-    border: 1px solid #1a2e40;
-    outline: none;
-}
-QListWidget::item {
-    padding: 4px 8px;
-}
-QListWidget::item:selected {
-    background-color: #2d6cdf;
-    color: #ffffff;
-}
-QTextEdit {
-    background-color: #162030;
-    color: #ccddef;
-    border: 1px solid #1a2e40;
-    selection-background-color: #2d6cdf;
-    selection-color: #ffffff;
-}
-QSplitter::handle {
-    background-color: #1c2b3a;
-}
-QSplitter::handle:hover {
-    background-color: #4a6888;
+    background-color: #060c18;
 }
 QScrollBar:vertical {
-    background: #0d1a28;
-    width: 10px;
+    background: transparent;
+    width: 8px;
     margin: 2px;
 }
 QScrollBar::handle:vertical {
-    background: #4a6888;
+    background: #1a3050;
     min-height: 20px;
-    border-radius: 4px;
+    border-radius: 3px;
 }
+QScrollBar::handle:vertical:hover { background: #244068; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }
 QToolTip {
-    background-color: #1a3050;
-    color: #ccddef;
-    border: 1px solid #3a6488;
+    background-color: #0b1628;
+    color: #b8d4ee;
+    border: 1px solid #1a3050;
     border-radius: 5px;
     padding: 6px 10px;
     font-size: 12px;
-    opacity: 230;
 }
 """
 
-    _SS_BTN_UNCHECKED = """QPushButton {
-    background-color: #243546;
-    color: #7a90a8;
-    border: 1px solid #1a2e40;
+    # ツールボタン: 未チェック
+    _SS_BTN_UNCHECKED = """
+QPushButton {
+    background-color: #0f1e34;
+    border: 1px solid #1a2e4a;
     border-radius: 6px;
     text-align: left;
-    padding: 0 12px;
-    font-size: 12px;
 }
-QPushButton:hover   { background-color: #2d3e52; }
-QPushButton:pressed { background-color: #1a2737; }
+QPushButton:hover {
+    background-color: #122030;
+    border: 1px solid #243c58;
+}
+QPushButton:disabled { background-color: #0a1424; border-color: #14253a; }
 """
 
-    _SS_BTN_OK = """QPushButton {
-    background-color: #183328;
-    color: #3ecb72;
-    border: 1px solid #1e4a32;
+    # ツールボタン: OK
+    _SS_BTN_OK = """
+QPushButton {
+    background-color: #061c14;
+    border: 1px solid #0a3020;
     border-radius: 6px;
     text-align: left;
-    padding: 0 12px;
-    font-size: 12px;
 }
-QPushButton:hover { background-color: #1e3d2e; }
+QPushButton:hover { background-color: #081e16; }
+QPushButton:disabled { background-color: #04140e; }
 """
 
-    _SS_BTN_ERROR = """QPushButton {
-    background-color: #3a1e1e;
-    color: #e06060;
-    border: 1px solid #5a2a2a;
+    # ツールボタン: エラー
+    _SS_BTN_ERROR = """
+QPushButton {
+    background-color: #200c0c;
+    border: 1px solid #3a1010;
     border-radius: 6px;
     text-align: left;
-    padding: 0 12px;
-    font-size: 12px;
 }
-QPushButton:hover { background-color: #462424; }
+QPushButton:hover { background-color: #240e0e; }
+QPushButton:disabled { background-color: #170808; }
 """
 
-    _SS_BTN_FIX = """QPushButton {
-    background-color: #3a6ec0;
+    # FIX ボタン
+    _SS_BTN_FIX = """
+QPushButton {
+    background-color: #1e6ac0;
     color: white;
+    border: none;
     border-radius: 6px;
     font-size: 11px;
+    font-weight: 600;
 }
-QPushButton:hover    { background-color: #5a8ee0; }
-QPushButton:pressed  { background-color: #2a5aa0; }
+QPushButton:hover    { background-color: #2878d0; }
+QPushButton:pressed  { background-color: #1858a8; }
 QPushButton:disabled { background-color: #2a3a50; color: #506070; }
 """
 
-    _SS_BTN_ALL = """QPushButton {
-    background-color: #3a6ec0;
-    color: white;
+    # ALL CHECK ボタン
+    _SS_BTN_ALL = """
+QPushButton {
+    background-color: #0a1e38;
+    border: 1px solid #2878d0;
+    color: #88b8f0;
     border-radius: 6px;
-    height: 26px;
-    padding: 0 14px;
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 0 10px;
 }
-QPushButton:hover    { background-color: #5a8ee0; }
-QPushButton:pressed  { background-color: #2a5aa0; }
-QPushButton:disabled { background-color: #2a3a50; color: #506070; }
+QPushButton:hover {
+    background-color: #0e2444;
+    border: 1px solid #3a8ce0;
+}
+QPushButton:pressed  { background-color: #08182e; }
+QPushButton:disabled {
+    background-color: #07172a;
+    color: #2a4868;
+    border-color: #14283d;
+}
 """
 
-    _SS_BTN_CHECK = """QPushButton {
-    background-color: #2a5c40;
-    color: #7ae0a8;
+    # CHECK ボタン
+    _SS_BTN_CHECK = """
+QPushButton {
+    background-color: #0d2e2a;
+    border: 1px solid #3ecfbe;
+    color: #3ecfbe;
     border-radius: 6px;
-    height: 26px;
-    padding: 0 14px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 0 10px;
+}
+QPushButton:hover {
+    background-color: #112e2a;
+    border: 1px solid #5ee0d0;
+}
+QPushButton:pressed  { background-color: #0a2420; }
+QPushButton:disabled {
+    background-color: #08201d;
+    color: #1a4540;
+    border-color: #14302c;
+}
+"""
+
+    # オブジェクトリスト
+    _SS_OBJECT_LIST = """
+QListWidget {
+    background-color: #0b1628;
+    color: #b8d4ee;
+    border: 1px solid #1a2e4a;
+    border-radius: 8px;
+    outline: none;
+    padding: 4px 0;
     font-size: 12px;
 }
-QPushButton:hover    { background-color: #3a7a58; }
-QPushButton:pressed  { background-color: #1e4430; }
-QPushButton:disabled { background-color: #1e3028; color: #4a6858; }
+QListWidget::item {
+    padding: 7px 14px;
+    border-left: 3px solid transparent;
+}
+QListWidget::item:hover { background-color: #0f1e34; }
+QListWidget::item:selected {
+    background-color: #142440;
+    color: #3ecfbe;
+    border-left: 3px solid #3ecfbe;
+}
+"""
+
+    # 詳細ビュー
+    _SS_DETAIL_VIEW = """
+QTextEdit {
+    background-color: #0b1628;
+    color: #b8d4ee;
+    border: 1px solid #1a2e4a;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    selection-background-color: #142440;
+    selection-color: #3ecfbe;
+}
+"""
+
+    # 左パネル外枠
+    _SS_LEFT_PANEL = """
+QFrame#leftPanel {
+    background-color: #0b1628;
+    border: 1px solid #1a2e4a;
+    border-radius: 8px;
+}
+"""
+
+    # ステータスバー
+    _SS_STATUS_BAR = """
+QFrame#statusBar {
+    background-color: #0b1628;
+    border-top: 1px solid #1a2e4a;
+}
 """
 
     # Maya 選択をスキップする疑似キー
@@ -388,86 +560,117 @@ QPushButton:disabled { background-color: #1e3028; color: #4a6858; }
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # ---- トップバー ----
-        top = QtWidgets.QWidget()
-        top.setStyleSheet("background-color: #111e2d; border-bottom: 1px solid #1a2e40;")
-        top_lay = QtWidgets.QHBoxLayout(top)
-        top_lay.setContentsMargins(14, 7, 14, 7)
+        # ---- ボディ（左パネル + 右パネル）----
+        body = QtWidgets.QWidget()
+        body.setStyleSheet("background: transparent;")
+        body_lay = QtWidgets.QHBoxLayout(body)
+        body_lay.setContentsMargins(10, 10, 10, 10)
+        body_lay.setSpacing(10)
 
-        top_lay.addStretch()
+        # ---- 左パネル ----
+        left_panel = QtWidgets.QFrame()
+        left_panel.setObjectName("leftPanel")
+        left_panel.setStyleSheet(self._SS_LEFT_PANEL)
+        left_panel.setFixedWidth(LEFT_PANEL_W)
+        left_lay = QtWidgets.QVBoxLayout(left_panel)
+        left_lay.setContentsMargins(0, 0, 0, 0)
+        left_lay.setSpacing(0)
+
+        # 左パネル上部: CHECK / ALL CHECK ボタン
+        top_btn_w = QtWidgets.QWidget()
+        top_btn_w.setStyleSheet("background: transparent;")
+        top_btn_lay = QtWidgets.QHBoxLayout(top_btn_w)
+        top_btn_lay.setContentsMargins(7, 7, 7, 0)
+        top_btn_lay.setSpacing(6)
 
         self.check_btn = QtWidgets.QPushButton("CHECK")
+        self.check_btn.setFixedHeight(BTN_H)
         self.check_btn.setStyleSheet(self._SS_BTN_CHECK)
         self.check_btn.clicked.connect(self.start_check)
-        top_lay.addWidget(self.check_btn)
+        self.check_btn.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
 
         self.all_check_btn = QtWidgets.QPushButton("ALL CHECK")
+        self.all_check_btn.setFixedHeight(BTN_H)
         self.all_check_btn.setStyleSheet(self._SS_BTN_ALL)
         self.all_check_btn.clicked.connect(self.start_all_check)
-        top_lay.addWidget(self.all_check_btn)
-        root.addWidget(top)
+        self.all_check_btn.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
 
-        # ---- メインエリア ----
-        main_w = QtWidgets.QWidget()
-        main_lay = QtWidgets.QHBoxLayout(main_w)
-        main_lay.setContentsMargins(8, 8, 8, 8)
-        main_lay.setSpacing(8)
+        top_btn_lay.addWidget(self.check_btn)
+        top_btn_lay.addWidget(self.all_check_btn)
+        left_lay.addWidget(top_btn_w)
 
-        # 左ペイン（スクロールエリア）
-        sbw = QtWidgets.QApplication.style().pixelMetric(QtWidgets.QStyle.PM_ScrollBarExtent)
+        # 左パネル下部: ツール一覧（スクロール）
         scroll = QtWidgets.QScrollArea()
         scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QtWidgets.QFrame.NoFrame)        # フレームを除去してvpを正確に確保
-        scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
+        scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
+        scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
-        # LEFT_W + row間隔(4) + FIX_W + rows_layoutの左右余白(4+4) + スクロールバー
-        scroll.setFixedWidth(LEFT_W + 4 + FIX_W + 8 + sbw)
+        scroll.setStyleSheet(
+            "QScrollArea { background: transparent; border: none; }"
+            " QScrollArea > QWidget > QWidget { background: transparent; }"
+        )
 
         left_inner = QtWidgets.QWidget()
+        left_inner.setStyleSheet("background: transparent;")
         self.rows_layout = QtWidgets.QVBoxLayout(left_inner)
-        self.rows_layout.setContentsMargins(4, 4, 4, 4)
-        self.rows_layout.setSpacing(4)
+        self.rows_layout.setContentsMargins(7, 7, 7, 7)
+        self.rows_layout.setSpacing(3)
         scroll.setWidget(left_inner)
         self.left_scroll = scroll
         self.left_inner  = left_inner
-        main_lay.addWidget(scroll)
+        left_lay.addWidget(scroll, 1)
 
-        # 右ペイン（スプリッター）
-        splitter = QtWidgets.QSplitter(QtCore.Qt.Horizontal)
+        body_lay.addWidget(left_panel)
+
+        # ---- 右パネル（オブジェクトリスト + 詳細ビュー）----
+        right_w = QtWidgets.QWidget()
+        right_w.setStyleSheet("background: transparent;")
+        right_lay = QtWidgets.QHBoxLayout(right_w)
+        right_lay.setContentsMargins(0, 0, 0, 0)
+        right_lay.setSpacing(8)
+
         self.object_list = QtWidgets.QListWidget()
         self.object_list.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.object_list.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.object_list.setStyleSheet(self._SS_OBJECT_LIST)
+
         self.detail_view = QtWidgets.QTextEdit()
         self.detail_view.setReadOnly(True)
-        splitter.addWidget(self.object_list)
-        splitter.addWidget(self.detail_view)
-        splitter.setStretchFactor(0, 1)
-        splitter.setStretchFactor(1, 2)
-        main_lay.addWidget(splitter, 1)
+        self.detail_view.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.detail_view.setStyleSheet(self._SS_DETAIL_VIEW)
+
+        # HTML mockup の比率: 37% / 63%
+        right_lay.addWidget(self.object_list, 37)
+        right_lay.addWidget(self.detail_view, 63)
 
         self.object_list.currentItemChanged.connect(self.on_object_selected)
         self.object_list.itemClicked.connect(self.on_object_clicked)
-        root.addWidget(main_w, 1)
+
+        body_lay.addWidget(right_w, 1)
+        root.addWidget(body, 1)
 
         # ---- ステータスバー ----
         status = QtWidgets.QFrame()
-        status.setStyleSheet("QFrame { background-color: #0e1c2c; border-top: 1px solid #1a2e40; }")
+        status.setObjectName("statusBar")
+        status.setStyleSheet(self._SS_STATUS_BAR)
+        status.setFixedHeight(30)
         status_lay = QtWidgets.QHBoxLayout(status)
-        status_lay.setContentsMargins(14, 5, 14, 5)
-        status_lay.setSpacing(18)
+        status_lay.setContentsMargins(16, 5, 16, 5)
+        status_lay.setSpacing(20)
 
         _lbl_ss = "font-size: 11px; background: transparent;"
         self._lbl_error     = QtWidgets.QLabel("✗  0件エラー")
         self._lbl_ok        = QtWidgets.QLabel("✓  0件 OK")
         self._lbl_unchecked = QtWidgets.QLabel("○  0件 未チェック")
-        self._lbl_error.setStyleSheet(f"color: #c05050; {_lbl_ss}")
-        self._lbl_ok.setStyleSheet(f"color: #3ecb72; {_lbl_ss}")
-        self._lbl_unchecked.setStyleSheet(f"color: #6a8aaa; {_lbl_ss}")
+        self._lbl_error.setStyleSheet(f"color: #e05858; {_lbl_ss}")
+        self._lbl_ok.setStyleSheet(f"color: #28c880; {_lbl_ss}")
+        self._lbl_unchecked.setStyleSheet(f"color: #4878a0; {_lbl_ss}")
         for lbl in (self._lbl_error, self._lbl_ok, self._lbl_unchecked):
             status_lay.addWidget(lbl)
         status_lay.addStretch()
 
         ver_lbl = QtWidgets.QLabel(f"v{LAUNCHER_VERSION}")
-        ver_lbl.setStyleSheet(f"color: #6a89a8; {_lbl_ss}")
+        ver_lbl.setStyleSheet("color: #263c58; font-size: 10px; background: transparent;")
         status_lay.addWidget(ver_lbl)
         root.addWidget(status)
 
@@ -481,29 +684,46 @@ QPushButton:disabled { background-color: #1e3028; color: #4a6858; }
             return
 
         self.folders = [entry["folder"] for entry in manifest]
+        self._folder_titles     = {}
+        self._folder_categories = {}
+        self._category_widgets  = {}   # cat_name -> {"header", "rows": [...], "folders": [...]}
 
+        last_cat = None
         for entry in manifest:
             folder = entry["folder"]
-            self._folder_states[folder] = _S_UNCHECKED
-            self._folder_counts[folder] = 0
-            self.has_fix_script[folder] = entry.get("has_fix", False)
+            title  = entry.get("title", folder)
+            desc   = entry.get("description", "")
+            ver    = entry.get("version", "")
+            cat    = entry.get("category", "Other")
 
-            row = QtWidgets.QHBoxLayout()
-            row.setSpacing(4)
-            row.setContentsMargins(0, 0, 0, 0)
+            self._folder_states[folder]     = _S_UNCHECKED
+            self._folder_counts[folder]     = 0
+            self.has_fix_script[folder]     = entry.get("has_fix", False)
+            self._folder_titles[folder]     = title
+            self._folder_categories[folder] = cat
 
-            # チェックボタン（メイン）— ダブルクリックでチェック実行
-            btn = _DoubleClickButton(f"  ○  {folder}")
+            # カテゴリヘッダー（カテゴリが変わったタイミングで挿入）
+            if cat != last_cat:
+                last_cat = cat
+                header = _CategoryHeader(cat)
+                header.clicked.connect(lambda c=cat: self._toggle_category(c))
+                self.rows_layout.addWidget(header)
+                self._category_widgets[cat] = {"header": header, "rows": [], "folders": []}
+
+            # ツール 1 行（ボタン + FIX）を QWidget で包む（折り畳み制御のため）
+            row_w = QtWidgets.QWidget()
+            row_w.setStyleSheet("background: transparent;")
+            row_lay = QtWidgets.QHBoxLayout(row_w)
+            row_lay.setSpacing(4)
+            row_lay.setContentsMargins(0, 0, 0, 0)
+
+            btn = _ToolButton()
             btn.setFixedHeight(BTN_H)
-            btn.setMinimumWidth(1)   # テキストが長くても FIX を押し出さないよう最小幅を解除
-            btn.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
             btn.setStyleSheet(self._SS_BTN_UNCHECKED)
+            btn.setName(f"○  {title}", "#4878a0")
             btn.singleClicked.connect(lambda f=folder: self._show_last_results(f))
             btn.doubleClicked.connect(lambda f=folder: self.run_check(f, show_details=True))
-            title = entry.get("title", folder)
-            desc  = entry.get("description", "")
-            ver   = entry.get("version", "")
-            cat   = entry.get("category", "")
+
             if title or desc:
                 meta_parts = []
                 if cat:
@@ -520,11 +740,11 @@ QPushButton:disabled { background-color: #1e3028; color: #4a6858; }
                     f"<td><b style='font-size:13px;'>{title}</b></td>"
                     f"{meta_html}"
                     f"</tr></table>"
-                    f"<hr style='border:1px solid #3a6488; margin:4px 0;'>"
+                    f"<hr style='border:1px solid #1a3050; margin:4px 0;'>"
                     f"<span style='line-height:1.6;'>{desc}</span>"
                 )
                 btn.installEventFilter(self._tooltip_filter)
-            row.addWidget(btn)
+            row_lay.addWidget(btn)
             self._check_btns[folder] = btn
 
             # FIX ボタン（has_fix=true のツール・エラー時のみ表示）
@@ -534,13 +754,38 @@ QPushButton:disabled { background-color: #1e3028; color: #4a6858; }
             fix_btn.setStyleSheet(self._SS_BTN_FIX)
             fix_btn.setVisible(False)
             fix_btn.clicked.connect(lambda *_, f=folder: self._run_fix(f))
-            row.addWidget(fix_btn)
+            row_lay.addWidget(fix_btn)
             self._fix_btns[folder] = fix_btn
 
-            self.rows_layout.addLayout(row)
+            self.rows_layout.addWidget(row_w)
+            self._category_widgets[cat]["rows"].append(row_w)
+            self._category_widgets[cat]["folders"].append(folder)
 
         self.rows_layout.addStretch()
         self._update_status_bar()
+
+    # ----------------------------------------------------------
+    # カテゴリ折り畳み / バッジ
+    # ----------------------------------------------------------
+    def _toggle_category(self, cat):
+        info = self._category_widgets.get(cat)
+        if not info:
+            return
+        new_collapsed = not info["header"].isCollapsed()
+        info["header"].setCollapsed(new_collapsed)
+        for row in info["rows"]:
+            row.setVisible(not new_collapsed)
+
+    def _update_category_badge(self, cat):
+        info = self._category_widgets.get(cat)
+        if not info:
+            return
+        err_count = sum(
+            self._folder_counts.get(f, 0)
+            for f in info["folders"]
+            if self._folder_states.get(f) == _S_ERROR
+        )
+        info["header"].setBadge(err_count)
 
     # ----------------------------------------------------------
     # 高さ自動調整
@@ -567,21 +812,29 @@ QPushButton:disabled { background-color: #1e3028; color: #4a6858; }
         if not btn:
             return
 
+        title = self._folder_titles.get(folder, folder)
         if state == _S_UNCHECKED:
-            btn.setText(f"  ○  {folder}")
             btn.setStyleSheet(self._SS_BTN_UNCHECKED)
+            btn.setName(f"○  {title}", "#4878a0")
+            btn.setBadge("", False)
         elif state == _S_OK:
-            btn.setText(f"  ✓  {folder}")
             btn.setStyleSheet(self._SS_BTN_OK)
+            btn.setName(f"✓  {title}", "#28c880")
+            btn.setBadge("", False)
         else:
-            suffix = f"   {count}件" if count > 0 else ""
-            btn.setText(f"  ✗  {folder}{suffix}")
             btn.setStyleSheet(self._SS_BTN_ERROR)
+            btn.setName(f"✗  {title}", "#e05858")
+            btn.setBadge(str(count) if count > 0 else "", count > 0)
 
         if fix:
             show = state == _S_ERROR and self.has_fix_script.get(folder, False)
             fix.setVisible(show)
             fix.setEnabled(show)
+
+        # カテゴリヘッダーのバッジを更新
+        cat = self._folder_categories.get(folder)
+        if cat:
+            self._update_category_badge(cat)
 
     def _update_status_bar(self):
         n_err = sum(1 for s in self._folder_states.values() if s == _S_ERROR)
