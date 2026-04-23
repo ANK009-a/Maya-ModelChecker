@@ -46,7 +46,7 @@ def get_results():
                 "message": "非表示オブジェクト",
                 "details": [
                     f"visibility: {vis}",
-                    "correct で表示状態に戻す（削除はユーザーが判断してください）",
+                    "fix で表示状態に戻す（削除はユーザーが判断してください）",
                 ],
             })
     return results

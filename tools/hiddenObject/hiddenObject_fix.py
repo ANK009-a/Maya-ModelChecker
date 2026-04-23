@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-hiddenObject_correct.py
+hiddenObject_fix.py
 選択オブジェクトを visibility=True にして表示状態に戻す。
 削除するかどうかはユーザーが判断するため、ここでは表示のみ行う。
 """

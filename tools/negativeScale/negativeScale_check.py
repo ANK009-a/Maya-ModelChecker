@@ -45,7 +45,7 @@ def get_results():
                     f"scaleY: {s[1]:.6f}",
                     f"scaleZ: {s[2]:.6f}",
                     f"マイナス軸: {', '.join(neg)}",
-                    "修正: correct ボタンで makeIdentity(scale) + 法線反転を実行",
+                    "修正: fix ボタンで makeIdentity(scale) + 法線反転を実行",
                 ],
             })
     return results

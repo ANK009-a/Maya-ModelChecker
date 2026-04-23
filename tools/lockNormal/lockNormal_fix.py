@@ -1,4 +1,4 @@
-# lockNormal_correct.py
+# lockNormal_fix.py
 # 選択中オブジェクトの mesh に対して
 # 「ロックされている法線（freeze normals / locked normals）」を解除する。
 # OpenMaya API を優先し、失敗時は cmds フォールバック。
@@ -103,11 +103,6 @@ def get_results():
                     "message": f"{shape}: ロック解除を実行",
                 })
     return results
-
-
-def correct():
-    """互換用"""
-    return get_results()
 
 
 if __name__ == "__main__":

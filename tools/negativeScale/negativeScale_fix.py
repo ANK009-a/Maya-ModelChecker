@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-negativeScale_correct.py
+negativeScale_fix.py
 選択オブジェクトのマイナススケールを makeIdentity(scale) でフリーズし、
 見た目が裏返らないよう法線を全フェース反転する。
 

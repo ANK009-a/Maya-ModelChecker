@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-animationKey_correct.py
+animationKey_fix.py
 選択されたアニメーション系ノード（animCurve* / animLayer）を削除する。
 
 assetChecker から呼ばれる際は _run_fix() が事前にチェック結果のノードを選択しているため、

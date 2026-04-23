@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-overlappingVtx_correct.py
+overlappingVtx_fix.py
 選択オブジェクトの重複頂点を polyMergeVertex でマージする。
 """
 import maya.cmds as cmds

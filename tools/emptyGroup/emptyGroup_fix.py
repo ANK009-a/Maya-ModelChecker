@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-emptyGroup_correct.py
+emptyGroup_fix.py
 選択した空グループ（子なし transform）を削除する。
 接続がある場合や子がある場合はスキップして警告を出す。
 """

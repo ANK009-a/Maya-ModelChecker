@@ -27,7 +27,7 @@ GitHub (パブリックリポジトリ)
     ├── colorSet/
     │   ├── manifest.json        ← メタ情報
     │   ├── colorSet_check.py    ← チェックスクリプト
-    │   └── colorSet_correct.py  ← 修正スクリプト（任意）
+    │   └── colorSet_fix.py      ← 修正スクリプト（任意）
     ├── history/
     │   ├── manifest.json
     │   └── history_check.py
@@ -48,7 +48,7 @@ Maya ローカル
  │         （スクリプト本体はまだ取得しない）
  │
  └─③ チェックボタン押下時 → _check.py を取得して実行（遅延ローディング）
-       FIXボタン押下時    → _correct.py を取得して実行
+       FIXボタン押下時    → _fix.py を取得して実行
 ```
 
 ---
@@ -75,7 +75,7 @@ Maya ローカル
 
 ---
 
-## _check.py / _correct.py インターフェース規約
+## _check.py / _fix.py インターフェース規約
 
 現状と変わらず。`assetChecker.py` 側の `normalize_structured()` で吸収する。
 
@@ -132,7 +132,7 @@ def load_and_run(folder, script_name)
 ~/maya/scripts/assetChecker_cache/
 ├── colorSet_manifest.json
 ├── colorSet_check.py
-└── colorSet_correct.py
+└── colorSet_fix.py
 ```
 
 | タイミング | 挙動 |

@@ -1,4 +1,4 @@
-# vtx_correct.py
+# vtxTweak_fix.py
 # Lattice を一度かけてから Delete History で焼く（見た目を維持したまま pnts を 0 系に寄せる意図）
 # ※ lattice を動かさなければ見た目は変わりません（作って即焼くので当然）
 # ※ 既に変形（skin/cluster等）がある場合は「焼く」= その変形を破壊する可能性があります

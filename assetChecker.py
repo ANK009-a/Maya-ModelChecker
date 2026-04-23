@@ -369,7 +369,7 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
         # ウィジェット参照
         self._check_btns = {}
         self._fix_btns   = {}
-        self.has_correct_script = {}
+        self.has_fix_script = {}
 
         # 右パネル
         self.object_to_details = {}
@@ -507,7 +507,7 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
             folder = entry["folder"]
             self._folder_states[folder] = _S_UNCHECKED
             self._folder_counts[folder] = 0
-            self.has_correct_script[folder] = entry.get("has_fix", False)
+            self.has_fix_script[folder] = entry.get("has_fix", False)
 
             row = QtWidgets.QHBoxLayout()
             row.setSpacing(4)
@@ -594,7 +594,7 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
             btn.setStyleSheet(self._SS_BTN_ERROR)
 
         if fix:
-            show = state == _S_ERROR and self.has_correct_script.get(folder, False)
+            show = state == _S_ERROR and self.has_fix_script.get(folder, False)
             fix.setVisible(show)
             fix.setEnabled(show)
 
@@ -608,7 +608,7 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
         self._lbl_unchecked.setText(f"○  {n_unc}件 未チェック")
 
         can_fix = any(
-            self._folder_states.get(f) == _S_ERROR and self.has_correct_script.get(f)
+            self._folder_states.get(f) == _S_ERROR and self.has_fix_script.get(f)
             for f in self.folders
         )
         busy = self._all_check_running or self._all_fix_running
@@ -808,12 +808,12 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
     # ----------------------------------------------------------
     def _run_fix(self, folder):
         self._select_check_results(folder)  # チェック結果オブジェクトを事前に Maya 選択
-        structured, text = load_and_run(folder, f"{folder}_correct.py", selection=[])
+        structured, text = load_and_run(folder, f"{folder}_fix.py", selection=[])
         if structured is not None:
             self.set_object_results(self.normalize_structured(structured))
         else:
             self.set_object_results({"stdout": [text]} if text.strip() else {})
-        # correct 後に自動 re-check
+        # fix 後に自動 re-check
         QtCore.QTimer.singleShot(0, lambda: self.run_check(folder, show_details=True))
 
     # ----------------------------------------------------------
@@ -877,7 +877,7 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
             return
         queue = [
             f for f in self.folders
-            if self._folder_states.get(f) == _S_ERROR and self.has_correct_script.get(f)
+            if self._folder_states.get(f) == _S_ERROR and self.has_fix_script.get(f)
         ]
         if not queue:
             return
@@ -895,7 +895,7 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
         folder = self._all_fix_queue[self._all_fix_index]
         self._all_fix_index += 1
         self._select_check_results(folder)  # チェック結果オブジェクトを事前に Maya 選択
-        load_and_run(folder, f"{folder}_correct.py")
+        load_and_run(folder, f"{folder}_fix.py")
         self.run_check(folder, show_details=False)
         QtWidgets.QApplication.processEvents()
         QtCore.QTimer.singleShot(0, self._step_all_fix)
@@ -924,7 +924,7 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
             else:
                 show = (
                     self._folder_states.get(f) == _S_ERROR
-                    and self.has_correct_script.get(f, False)
+                    and self.has_fix_script.get(f, False)
                 )
                 fix_btn.setVisible(show)
                 fix_btn.setEnabled(show)

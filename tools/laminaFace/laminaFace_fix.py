@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-laminaFace_correct.py
+laminaFace_fix.py
 選択オブジェクトのラミナフェース（完全重複面）を削除する。
 polyInfo で面インデックスを特定し、該当フェースを delete する。
 """

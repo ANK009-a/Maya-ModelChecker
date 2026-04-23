@@ -1,4 +1,4 @@
-# freeze_correct.py
+# freeze_fix.py
 # 選択中オブジェクトのうち
 # - translate != (0,0,0)
 # - rotate    != (0,0,0)
@@ -52,7 +52,7 @@ def _attr_locked_or_connected(node, attr):
         return True
 
 
-def correct():
+def fix():
     sel = cmds.ls(sl=True, long=True) or []
     transforms = _to_transforms(sel)
 
@@ -122,10 +122,10 @@ def correct():
 
 def get_results():
     # checkList_v001.py の structured ルートで拾わせる入口
-    return correct()
+    return fix()
 
 
 if __name__ == "__main__":
     # 単体実行時は Script Editor に出す
-    for item in correct():
+    for item in fix():
         print(f'{item.get("transform")} : {item.get("message")}')

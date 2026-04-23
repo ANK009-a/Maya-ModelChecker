@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-colorSet_correct.py
+colorSet_fix.py
 シーン内（または選択範囲）の mesh shape が持つ「カラーセット」を削除します。
 
 - 選択がある場合: 選択 transform 配下の mesh を対象
@@ -199,9 +199,9 @@ def get_results():
 if __name__ == "__main__":
     res = get_results()
     if not res:
-        print("[ColorSet Correct] 対象なし（カラーセット所持meshが見つからない、または全てスキップ）")
+        print("[ColorSet Fix] 対象なし（カラーセット所持meshが見つからない、または全てスキップ）")
     else:
-        print(f"[ColorSet Correct] レポート {len(res)} 件")
+        print(f"[ColorSet Fix] レポート {len(res)} 件")
         for r in res:
             print(r["message"])
             for line in r.get("details", []):

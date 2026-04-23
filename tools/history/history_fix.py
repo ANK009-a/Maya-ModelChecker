@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-history_correct.py
+history_fix.py
 選択オブジェクトのヒストリーを削除する。
 - deformer（skinCluster, blendShape 等）がある場合 → bakePartialHistory でデフォーマを保持したまま削除
 - deformer がない場合 → delete -ch で全削除

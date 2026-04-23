@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-uvSet(error)_correct.py
+uvSet(error)_fix.py
 
 内容:
 シーン内の mesh について、
@@ -226,9 +226,9 @@ def get_results():
 if __name__ == "__main__":
     res = get_results()
     if not res:
-        print("[UVSet(Error) Correct] 対象なし")
+        print("[UVSet(Error) Fix] 対象なし")
     else:
-        print(f"[UVSet(Error) Correct] レポート {len(res)} 件")
+        print(f"[UVSet(Error) Fix] レポート {len(res)} 件")
         for r in res:
             print(r["message"])
             for line in r.get("details", []):

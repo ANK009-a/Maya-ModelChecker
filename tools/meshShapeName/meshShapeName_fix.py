@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-meshShapeName_correct.py
+meshShapeName_fix.py
 
-correct:
+fix:
 シーン内の non-intermediate mesh shape を、
 「親 transform の短名 + 'Shape'」に揃えるようにリネームします（選択不要）。
 
@@ -103,9 +103,9 @@ def get_results():
 if __name__ == "__main__":
     res = get_results()
     if not res:
-        print("[meshShapeName Correct] 対象なし（リネーム不要 or 参照/中間のみ）")
+        print("[meshShapeName Fix] 対象なし（リネーム不要 or 参照/中間のみ）")
     else:
-        print(f"[meshShapeName Correct] レポート {len(res)} 件")
+        print(f"[meshShapeName Fix] レポート {len(res)} 件")
         for r in res:
             print(r["message"])
             for line in r.get("details", []):

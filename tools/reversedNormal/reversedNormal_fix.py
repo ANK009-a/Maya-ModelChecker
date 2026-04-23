@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-reversedNormal_correct.py
+reversedNormal_fix.py
 選択オブジェクトの反転フェースを検出し polyNormal(normalMode=0) でフリップする。
 """
 import collections
