@@ -31,7 +31,7 @@ def maya_main_window():
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 GITHUB_API_INDEX    = f"{GITHUB_RAW}/tools/manifest_index.json"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.2.1"
+LAUNCHER_VERSION    = "1.2.2"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタン / トップバーボタンの高さ
 FIX_W        = 38   # FIX ボタンの幅
@@ -520,7 +520,7 @@ QFrame#statusBar {
         super().__init__(parent)
         self.setObjectName(WINDOW_OBJECT_NAME)
         self.setWindowTitle("assetChecker")
-        self.resize(600, 500)
+        self.resize(600, 700)
         self.setStyleSheet(self._SS_DIALOG)
 
         # 状態管理
@@ -550,7 +550,6 @@ QFrame#statusBar {
 
         self._build_ui()
         self._load_folders()
-        QtCore.QTimer.singleShot(0, self._adjust_height)
 
     # ----------------------------------------------------------
     # UI 構築
@@ -793,20 +792,6 @@ QFrame#statusBar {
             if self._folder_states.get(f) == _S_ERROR
         )
         info["header"].setBadge(err_count)
-
-    # ----------------------------------------------------------
-    # 高さ自動調整
-    # ----------------------------------------------------------
-    def _adjust_height(self):
-        try:
-            self.left_inner.adjustSize()
-            content_h = self.left_inner.sizeHint().height()
-            chrome_h  = max(0, self.height() - self.left_scroll.viewport().height())
-            screen    = QtWidgets.QApplication.primaryScreen()
-            max_h     = int(screen.availableGeometry().height() * 0.85) if screen else 900
-            self.resize(self.width(), min(max_h, max(360, content_h + chrome_h)))
-        except Exception:
-            pass
 
     # ----------------------------------------------------------
     # ボタン状態更新
