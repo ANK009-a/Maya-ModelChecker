@@ -15,7 +15,7 @@
   {"folder": "overlappingVtx", "title": "Overlapping Vertex",   "description": "同一座標に重複して存在する頂点を検出します。",                                                                     "has_fix": true,  "version": "1.0.1"},
   {"folder": "pivot",          "title": "Pivot",                "description": "ピボットがワールド原点にない mesh を検出します。",                                                                 "has_fix": false, "version": "1.0.0"},
   {"folder": "reversedNormal", "title": "Reversed Normal",      "description": "法線が逆向きのフェースを検出します。",                                                                            "has_fix": true,  "version": "1.0.1"},
-  {"folder": "texturePath",    "title": "Texture Path",         "description": "テクスチャパスが絶対パスだったりファイルが存在しない file ノードを検出します。",                                    "has_fix": false, "version": "1.0.0"},
+  {"folder": "texturePath",    "title": "Texture Path",         "description": "パス未設定またはファイルが存在しない file ノードを検出します。",                                                  "has_fix": false, "version": "1.1.0"},
   {"folder": "uv(0.0-1.0)",   "title": "UV Range",             "description": "UV 座標が 0〜1 の範囲外にある mesh を検出します。",                                                               "has_fix": false, "version": "1.0.0"},
   {"folder": "uvSet(error)",   "title": "UV Set (Error)",       "description": "UV Set Editor に表示されないが UV データを保持している UVset を検出します。",                                      "has_fix": true,  "version": "1.0.1"},
   {"folder": "uvSet(extra)",   "title": "UV Set (Extra)",       "description": "map1 以外の余分な UV セットを持つ mesh を検出します。",                                                           "has_fix": false, "version": "1.0.0"},

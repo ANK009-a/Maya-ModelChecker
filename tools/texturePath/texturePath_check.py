@@ -4,7 +4,6 @@ texturePath_check.py
 シーン内の file ノードを検索し、以下の問題を報告する:
   - パス未設定
   - ファイルが存在しない
-  - 絶対パス（他 PC / 別環境で開けない）
 UDIM / シーケンステクスチャ（<UDIM>, %04d 等）は存在チェックをスキップする。
 """
 import os
@@ -30,11 +29,6 @@ def get_results():
         details = [f"ノード: {fn}", f"パス: {path}"]
 
         is_sequence = "<" in path or "%" in path or "#" in path
-
-        # 絶対パスチェック
-        if os.path.isabs(path):
-            issues.append("絶対パス")
-            details.append("⚠ 絶対パス: 他 PC / 別環境で開けない場合があります")
 
         # ファイル存在チェック（シーケンス系はスキップ）
         if not is_sequence and not os.path.exists(path):
