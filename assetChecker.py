@@ -520,7 +520,7 @@ QFrame#statusBar {
         super().__init__(parent)
         self.setObjectName(WINDOW_OBJECT_NAME)
         self.setWindowTitle("assetChecker")
-        self.resize(600, 700)
+        self.resize(600, 650)
         self.setStyleSheet(self._SS_DIALOG)
 
         # 状態管理
