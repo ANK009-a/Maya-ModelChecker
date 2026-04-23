@@ -1,23 +1,28 @@
 [
-  {"folder": "animationKey",   "title": "Animation Key",        "description": "アニメーションキー（animCurve）と animLayer（BaseAnimation 含む）を検出します。",                                      "has_fix": true,  "version": "1.1.1"},
-  {"folder": "colorSet",       "title": "Color Set",            "description": "カラーセットを持つ mesh を検出します。",                                                                              "has_fix": true,  "version": "1.0.1"},
   {"folder": "emptyGroup",     "title": "Empty Group",          "description": "子オブジェクトも shape も持たない空のグループ transform を検出します。",                                            "has_fix": true,  "version": "1.0.1"},
-  {"folder": "freeze",         "title": "Freeze Transform",     "description": "移動・回転・スケール値がフリーズされていない transform を検出します。",                                             "has_fix": true,  "version": "1.0.1"},
   {"folder": "hiddenObject",   "title": "Hidden Object",        "description": "visibility が OFF になっているオブジェクトを検出します。",                                                         "has_fix": true,  "version": "1.0.1"},
-  {"folder": "history",        "title": "Construction History", "description": "コンストラクションヒストリーが残っている mesh を検出します。",                                                     "has_fix": true,  "version": "1.0.1"},
-  {"folder": "isolateVtx",     "title": "Isolated Vertex",      "description": "エッジやフェースに接続されていない孤立頂点を検出します。",                                                         "has_fix": false, "version": "1.0.0"},
-  {"folder": "laminaFace",     "title": "Lamina Face",          "description": "同じ頂点を共有する重複フェース（ラミナフェース）を検出します。",                                                    "has_fix": true,  "version": "1.0.1"},
-  {"folder": "lockNormal",     "title": "Locked Normal",        "description": "ロックされた法線 (Freeze Normals) を持つ mesh を検出します。",                                                     "has_fix": true,  "version": "1.0.1"},
-  {"folder": "meshShapeName",  "title": "Mesh Shape Name",      "description": "transform 名と Shape 名が一致しない mesh を検出します。",                                                          "has_fix": true,  "version": "1.0.1"},
-  {"folder": "nameCollision",  "title": "Name Collision",       "description": "シーン内に同名のノードが複数存在する場合を検出します。",                                                            "has_fix": false, "version": "1.0.0"},
-  {"folder": "negativeScale",  "title": "Negative Scale",       "description": "スケール値がマイナスの transform を検出します。",                                                                  "has_fix": true,  "version": "1.0.1"},
-  {"folder": "nonManifold",    "title": "Non-Manifold",         "description": "非多様体エッジ・頂点を検出します。",                                                                              "has_fix": false, "version": "1.0.0"},
-  {"folder": "overlappingVtx", "title": "Overlapping Vertex",   "description": "同一座標に重複して存在する頂点を検出します。",                                                                     "has_fix": true,  "version": "1.0.1"},
+  {"folder": "freeze",         "title": "Freeze Transform",     "description": "移動・回転・スケール値がフリーズされていない transform を検出します。",                                             "has_fix": true,  "version": "1.0.1"},
   {"folder": "pivot",          "title": "Pivot",                "description": "ピボットがワールド原点にない mesh を検出します。",                                                                 "has_fix": false, "version": "1.0.0"},
+  {"folder": "negativeScale",  "title": "Negative Scale",       "description": "スケール値がマイナスの transform を検出します。",                                                                  "has_fix": true,  "version": "1.0.1"},
+
+  {"folder": "nonManifold",    "title": "Non-Manifold",         "description": "非多様体エッジ・頂点を検出します。",                                                                              "has_fix": false, "version": "1.0.0"},
+  {"folder": "laminaFace",     "title": "Lamina Face",          "description": "同じ頂点を共有する重複フェース（ラミナフェース）を検出します。",                                                    "has_fix": true,  "version": "1.0.1"},
   {"folder": "reversedNormal", "title": "Reversed Normal",      "description": "法線が逆向きのフェースを検出します。",                                                                            "has_fix": true,  "version": "1.0.1"},
-  {"folder": "texturePath",    "title": "Texture Path",         "description": "パス未設定またはファイルが存在しない file ノードを検出します。",                                                  "has_fix": false, "version": "1.1.0"},
+  {"folder": "isolateVtx",     "title": "Isolated Vertex",      "description": "エッジやフェースに接続されていない孤立頂点を検出します。",                                                         "has_fix": false, "version": "1.0.0"},
+  {"folder": "overlappingVtx", "title": "Overlapping Vertex",   "description": "同一座標に重複して存在する頂点を検出します。",                                                                     "has_fix": true,  "version": "1.0.1"},
+
+  {"folder": "history",        "title": "Construction History", "description": "コンストラクションヒストリーが残っている mesh を検出します。",                                                     "has_fix": true,  "version": "1.0.1"},
+  {"folder": "vtxTweak",       "title": "Vertex Tweak",         "description": "頂点トゥイーク (pnts 配列) が残っている mesh を検出します。",                                                     "has_fix": true,  "version": "1.0.1"},
+  {"folder": "lockNormal",     "title": "Locked Normal",        "description": "ロックされた法線 (Freeze Normals) を持つ mesh を検出します。",                                                     "has_fix": true,  "version": "1.0.1"},
+  {"folder": "colorSet",       "title": "Color Set",            "description": "カラーセットを持つ mesh を検出します。",                                                                              "has_fix": true,  "version": "1.0.1"},
+  {"folder": "meshShapeName",  "title": "Mesh Shape Name",      "description": "transform 名と Shape 名が一致しない mesh を検出します。",                                                          "has_fix": true,  "version": "1.0.1"},
+
   {"folder": "uv(0.0-1.0)",   "title": "UV Range",             "description": "UV 座標が 0〜1 の範囲外にある mesh を検出します。",                                                               "has_fix": false, "version": "1.0.0"},
-  {"folder": "uvSet(error)",   "title": "UV Set (Error)",       "description": "UV Set Editor に表示されないが UV データを保持している UVset を検出します。",                                      "has_fix": true,  "version": "1.0.1"},
   {"folder": "uvSet(extra)",   "title": "UV Set (Extra)",       "description": "map1 以外の余分な UV セットを持つ mesh を検出します。",                                                           "has_fix": false, "version": "1.0.0"},
-  {"folder": "vtxTweak",       "title": "Vertex Tweak",         "description": "頂点トゥイーク (pnts 配列) が残っている mesh を検出します。",                                                     "has_fix": true,  "version": "1.0.1"}
+  {"folder": "uvSet(error)",   "title": "UV Set (Error)",       "description": "UV Set Editor に表示されないが UV データを保持している UVset を検出します。",                                      "has_fix": true,  "version": "1.0.1"},
+
+  {"folder": "texturePath",    "title": "Texture Path",         "description": "パス未設定またはファイルが存在しない file ノードを検出します。",                                                  "has_fix": false, "version": "1.1.0"},
+
+  {"folder": "nameCollision",  "title": "Name Collision",       "description": "シーン内に同名のノードが複数存在する場合を検出します。",                                                            "has_fix": false, "version": "1.0.0"},
+  {"folder": "animationKey",   "title": "Animation Key",        "description": "アニメーションキー（animCurve）と animLayer（BaseAnimation 含む）を検出します。",                                      "has_fix": true,  "version": "1.1.1"}
 ]
