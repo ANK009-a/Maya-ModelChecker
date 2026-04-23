@@ -30,6 +30,7 @@ def maya_main_window():
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 GITHUB_API_INDEX    = f"{GITHUB_RAW}/tools/manifest_index.json"
 WINDOW_OBJECT_NAME  = "assetChecker"
+LAUNCHER_VERSION    = "1.0.0"
 LEFT_W = 168   # 左パネル（チェックボタン列）の幅
 BTN_H  = 26    # チェックボタンの高さ
 FIX_W  = 40    # FIX ボタンの幅
@@ -335,19 +336,6 @@ QPushButton:pressed  { background-color: #1e4430; }
 QPushButton:disabled { background-color: #1e3028; color: #4a6858; }
 """
 
-    _SS_BTN_ALL_FIX = """QPushButton {
-    background-color: #8a2c2c;
-    color: #ffbbbb;
-    border-radius: 5px;
-    height: 20px;
-    padding: 0 10px;
-    font-size: 11px;
-}
-QPushButton:hover    { background-color: #b03a3a; }
-QPushButton:pressed  { background-color: #6a2020; }
-QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
-"""
-
     # Maya 選択をスキップする疑似キー
     _SKIP_SELECT_KEYS = frozenset({
         "stdout", "ALL_CHECK",
@@ -381,14 +369,11 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
         # ツールチップ即時表示フィルター（全ボタン共有）
         self._tooltip_filter = _InstantTooltipFilter(self)
 
-        # ALL CHECK / CHECK / ALL FIX 実行フラグ
+        # ALL CHECK / CHECK 実行フラグ
         self._all_check_running   = False
         self._all_check_index     = 0
         self._all_check_summary   = []
         self._all_check_selection = []   # [] = 全体, [...] = 選択範囲
-        self._all_fix_running   = False
-        self._all_fix_queue     = []
-        self._all_fix_index     = 0
 
         self._build_ui()
         self._load_folders()
@@ -408,11 +393,6 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
         top_lay = QtWidgets.QHBoxLayout(top)
         top_lay.setContentsMargins(14, 7, 14, 7)
 
-        title = QtWidgets.QLabel("assetChecker")
-        title.setStyleSheet(
-            "color: #7aaccf; font-size: 13px; font-weight: bold; background: transparent;"
-        )
-        top_lay.addWidget(title)
         top_lay.addStretch()
 
         self.check_btn = QtWidgets.QPushButton("CHECK")
@@ -485,11 +465,9 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
             status_lay.addWidget(lbl)
         status_lay.addStretch()
 
-        self.all_fix_btn = QtWidgets.QPushButton("ALL FIX")
-        self.all_fix_btn.setStyleSheet(self._SS_BTN_ALL_FIX)
-        self.all_fix_btn.setEnabled(False)
-        self.all_fix_btn.clicked.connect(self.start_all_fix)
-        status_lay.addWidget(self.all_fix_btn)
+        ver_lbl = QtWidgets.QLabel(f"v{LAUNCHER_VERSION}")
+        ver_lbl.setStyleSheet(f"color: #6a89a8; {_lbl_ss}")
+        status_lay.addWidget(ver_lbl)
         root.addWidget(status)
 
     # ----------------------------------------------------------
@@ -595,7 +573,7 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
             btn.setText(f"  ✓  {folder}")
             btn.setStyleSheet(self._SS_BTN_OK)
         else:
-            suffix = f"   ·  {count}件" if count > 0 else ""
+            suffix = f"   {count}件" if count > 0 else ""
             btn.setText(f"  ✗  {folder}{suffix}")
             btn.setStyleSheet(self._SS_BTN_ERROR)
 
@@ -612,13 +590,6 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
         self._lbl_error.setText(f"✗  {n_err}件エラー")
         self._lbl_ok.setText(f"✓  {n_ok}件 OK")
         self._lbl_unchecked.setText(f"○  {n_unc}件 未チェック")
-
-        can_fix = any(
-            self._folder_states.get(f) == _S_ERROR and self.has_fix_script.get(f)
-            for f in self.folders
-        )
-        busy = self._all_check_running or self._all_fix_running
-        self.all_fix_btn.setEnabled(can_fix and not busy)
 
     # ----------------------------------------------------------
     # Maya 選択ユーティリティ
@@ -827,7 +798,7 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
     # ----------------------------------------------------------
     def start_check(self):
         """選択オブジェクトのみを対象に全ツールをチェック"""
-        if self._all_check_running or self._all_fix_running:
+        if self._all_check_running:
             return
         sel = (cmds.ls(sl=True, long=True) or []) if cmds else []
         if not sel:
@@ -843,7 +814,7 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
         QtCore.QTimer.singleShot(0, self._step_all_check)
 
     def start_all_check(self):
-        if self._all_check_running or self._all_fix_running:
+        if self._all_check_running:
             return
         self._all_check_running   = True
         self._all_check_index     = 0
@@ -876,51 +847,14 @@ QPushButton:disabled { background-color: #3a2424; color: #6a4848; }
         self.detail_view.setPlainText("\n".join(lines))
 
     # ----------------------------------------------------------
-    # ALL FIX
-    # ----------------------------------------------------------
-    def start_all_fix(self):
-        if self._all_check_running or self._all_fix_running:
-            return
-        queue = [
-            f for f in self.folders
-            if self._folder_states.get(f) == _S_ERROR and self.has_fix_script.get(f)
-        ]
-        if not queue:
-            return
-        self._all_fix_running = True
-        self._all_fix_queue   = queue
-        self._all_fix_index   = 0
-        self._set_busy(True)
-        self.detail_view.setPlainText("ALL FIX 実行中...")
-        QtCore.QTimer.singleShot(0, self._step_all_fix)
-
-    def _step_all_fix(self):
-        if self._all_fix_index >= len(self._all_fix_queue):
-            self._finish_all_fix()
-            return
-        folder = self._all_fix_queue[self._all_fix_index]
-        self._all_fix_index += 1
-        self._select_check_results(folder)  # チェック結果オブジェクトを事前に Maya 選択
-        load_and_run(folder, f"{folder}_fix.py")
-        self.run_check(folder, show_details=False)
-        QtWidgets.QApplication.processEvents()
-        QtCore.QTimer.singleShot(0, self._step_all_fix)
-
-    def _finish_all_fix(self):
-        self._all_fix_running = False
-        self._set_busy(False)
-        self.detail_view.setPlainText("ALL FIX 完了")
-
-    # ----------------------------------------------------------
     # ビジー状態の一括制御
     # ----------------------------------------------------------
     def _set_busy(self, busy):
-        """ALL CHECK / CHECK / ALL FIX 実行中のボタン一括制御"""
+        """ALL CHECK / CHECK 実行中のボタン一括制御"""
         self.check_btn.setEnabled(not busy)
         self.check_btn.setText("…" if busy else "CHECK")
         self.all_check_btn.setEnabled(not busy)
         self.all_check_btn.setText("…" if busy else "ALL CHECK")
-        self.all_fix_btn.setText("…" if (busy and self._all_fix_running) else "ALL FIX")
 
         for btn in self._check_btns.values():
             btn.setEnabled(not busy)

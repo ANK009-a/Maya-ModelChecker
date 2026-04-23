@@ -130,6 +130,12 @@ def get_results():
 | `BTN_H`  | 26  | チェックボタンの高さ px |
 | `FIX_W`  | 40  | FIX ボタンの幅 px |
 
+## ランチャーバージョン
+```python
+LAUNCHER_VERSION = "1.0.0"  # assetChecker.py 上部
+```
+ステータスバー右下に `v1.0.0` として表示される。assetChecker.py 本体を編集したらこの値をバンプする。
+
 ## ウィンドウサイズ
 ```python
 self.resize(600, 500)  # __init__ 内
