@@ -31,7 +31,7 @@ def maya_main_window():
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 GITHUB_API_INDEX    = f"{GITHUB_RAW}/tools/manifest_index.json"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.3.0"
+LAUNCHER_VERSION    = "1.3.1"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタン / トップバーボタンの高さ
 FIX_W        = 38   # FIX ボタンの幅
@@ -102,15 +102,39 @@ class _InstantTooltipFilter(QtCore.QObject):
 # ============================================================
 # 詳細ビュー（コンポーネントクリック選択対応 QTextEdit）
 # ============================================================
+_COMPONENT_PATTERN = re.compile(
+    r'(?:\|?[A-Za-z_][A-Za-z0-9_:\|]*\.)?'
+    r'(?:vtx|f|e|map|uv|cv|ep|pt)\[[0-9:,\-\s]+\]'
+)
+
+
 class _ComponentTextEdit(QtWidgets.QTextEdit):
     """クリックされた位置の Maya コンポーネント（vtx[], f[], e[], map[] 等）を
-    検出して componentClicked シグナルを emit する。テキスト選択（ドラッグ）時は emit しない。"""
+    検出して componentClicked シグナルを emit する。
+    - ホバー時にポインターカーソル表示
+    - テキスト選択（ドラッグ）時は emit しない"""
     componentClicked = QtCore.Signal(str)
 
-    _COMP_PATTERN = re.compile(
-        r'(?:\|?[A-Za-z_][A-Za-z0-9_:\|]*\.)?'
-        r'(?:vtx|f|e|map|uv|cv|ep|pt)\[[0-9:,\-\s]+\]'
-    )
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setMouseTracking(True)  # ボタン無しでも mouseMoveEvent を受信
+
+    def _component_at(self, pos):
+        cursor = self.cursorForPosition(pos)
+        block_text = cursor.block().text()
+        col = cursor.positionInBlock()
+        for m in _COMPONENT_PATTERN.finditer(block_text):
+            if m.start() <= col <= m.end():
+                return m.group(0)
+        return None
+
+    def mouseMoveEvent(self, event):
+        super().mouseMoveEvent(event)
+        vp = self.viewport()
+        if self._component_at(event.pos()):
+            vp.setCursor(QtCore.Qt.PointingHandCursor)
+        else:
+            vp.setCursor(QtCore.Qt.IBeamCursor)
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
@@ -119,13 +143,9 @@ class _ComponentTextEdit(QtWidgets.QTextEdit):
         # ドラッグでテキスト選択された場合は Maya 選択を発火しない
         if self.textCursor().hasSelection():
             return
-        cursor = self.cursorForPosition(event.pos())
-        block_text = cursor.block().text()
-        col = cursor.positionInBlock()
-        for m in self._COMP_PATTERN.finditer(block_text):
-            if m.start() <= col <= m.end():
-                self.componentClicked.emit(m.group(0))
-                return
+        comp = self._component_at(event.pos())
+        if comp:
+            self.componentClicked.emit(comp)
 
 
 # ============================================================
@@ -972,30 +992,44 @@ QFrame#statusBar {
         self._apply_maya_selection_for_key(key, details)
 
     @staticmethod
-    def _format_details_html(details):
+    def _wrap_components(escaped_text):
+        """エスケープ済みテキスト内の Maya コンポーネント文字列をボタン風 span で包む"""
+        return _COMPONENT_PATTERN.sub(
+            lambda m: (
+                f"<span style='background:#14243c; color:#88b8f0;"
+                f" border: 1px solid #1e3554;"
+                f" border-radius:3px; padding:0 4px;'>{m.group(0)}</span>"
+            ),
+            escaped_text,
+        )
+
+    @classmethod
+    def _format_details_html(cls, details):
         """details リストを見やすい HTML に整形する。
         - 1 行目（message）: 強調見出し
         - ⚠ で始まる行: 警告色（アンバー）
         - インデント行（先頭スペース2文字以上）: モノスペースでサンプル/座標を整列表示
         - "key: value" 形式: ラベルと値を色分け
         - その他: 通常テキスト
+        - Maya コンポーネント（vtx[..] / f[..] 等）は pill 状にスタイリング → クリックで Maya 選択
         """
         if not details:
             return ""
+        wrap = cls._wrap_components
         out = []
         for i, raw in enumerate(details):
             text = html.escape(str(raw))
             if i == 0:
                 out.append(
                     f"<div style='font-weight:bold; color:#7aa3d0;"
-                    f" font-size:13px; margin-bottom:8px;'>{text}</div>"
+                    f" font-size:13px; margin-bottom:8px;'>{wrap(text)}</div>"
                 )
                 continue
             stripped = str(raw).lstrip()
             leading = len(str(raw)) - len(stripped)
             if stripped.startswith("⚠"):
                 out.append(
-                    f"<div style='color:#e0b060; padding:1px 0;'>{text}</div>"
+                    f"<div style='color:#e0b060; padding:1px 0;'>{wrap(text)}</div>"
                 )
                 continue
             if leading >= 2:
@@ -1003,7 +1037,7 @@ QFrame#statusBar {
                 out.append(
                     f"<div style='font-family:Consolas,monospace; color:#a0c4e0;"
                     f" padding:1px 0 1px {indent_px}px; white-space:pre;'>"
-                    f"{html.escape(stripped)}</div>"
+                    f"{wrap(html.escape(stripped))}</div>"
                 )
                 continue
             if ": " in text:
@@ -1011,12 +1045,12 @@ QFrame#statusBar {
                 out.append(
                     f"<div style='padding:1px 0;'>"
                     f"<span style='color:#7a9aae;'>{k}:</span> "
-                    f"<span style='color:#ccddef; font-family:Consolas,monospace;'>{v}</span>"
+                    f"<span style='color:#ccddef; font-family:Consolas,monospace;'>{wrap(v)}</span>"
                     f"</div>"
                 )
                 continue
             out.append(
-                f"<div style='padding:1px 0; color:#ccddef;'>{text}</div>"
+                f"<div style='padding:1px 0; color:#ccddef;'>{wrap(text)}</div>"
             )
         return "".join(out)
 

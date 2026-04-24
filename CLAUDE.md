@@ -132,9 +132,9 @@ def get_results():
 
 ## ランチャーバージョン
 ```python
-LAUNCHER_VERSION = "1.3.0"  # assetChecker.py 上部
+LAUNCHER_VERSION = "1.3.1"  # assetChecker.py 上部
 ```
-ステータスバー右下に `v1.3.0` として表示される。assetChecker.py 本体を編集したらこの値をバンプする。
+ステータスバー右下に `v1.3.1` として表示される。assetChecker.py 本体を編集したらこの値をバンプする。
 
 ## 詳細表示の HTML 整形
 右パネルの詳細ビュー（`detail_view`）は `_format_details_html()` で HTML 化される：
@@ -199,10 +199,13 @@ QDialog (bg #060c18)
 ## 詳細ビューのコンポーネントクリック選択
 `_ComponentTextEdit`（`QTextEdit` を継承）：
 - `mouseReleaseEvent` で `vtx[..]` / `f[..]` / `e[..]` / `map[..]` / `uv[..]` / `cv[..]` / `ep[..]` / `pt[..]` パターンを検出
+- `setMouseTracking(True)` + `mouseMoveEvent` でコンポーネント上にホバー時だけカーソルを `PointingHandCursor` に変更（その他は `IBeamCursor`）
 - ドラッグでテキスト選択した場合は emit しない（通常のテキストコピーを阻害しない）
 - `componentClicked` シグナル → `_on_detail_component_clicked`:
   - フル形式（`xxx.vtx[..]`）→ そのまま `cmds.select`
   - コンポーネントのみ（`vtx[..]`）→ object_list で選択中のオブジェクト key と結合して select
+- 見た目: `_format_details_html` 内の `_wrap_components` でコンポーネント文字列を `<span>` で囲み、pill 状（bg `#14243c` / border `#1e3554` / text `#88b8f0` / radius 3px / padding 0 4px）に装飾
+- 正規表現は module-level `_COMPONENT_PATTERN` に集約（検出とスタイリングで同一パターンを共用）
 
 ## ボタン操作
 - **シングルクリック**：直近のチェック結果を右パネルに再表示（再チェックしない）
