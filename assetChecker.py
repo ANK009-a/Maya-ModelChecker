@@ -31,7 +31,7 @@ def maya_main_window():
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 GITHUB_API_INDEX    = f"{GITHUB_RAW}/tools/manifest_index.json"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.2.4"
+LAUNCHER_VERSION    = "1.3.0"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタン / トップバーボタンの高さ
 FIX_W        = 38   # FIX ボタンの幅
@@ -100,10 +100,39 @@ class _InstantTooltipFilter(QtCore.QObject):
 
 
 # ============================================================
-# ツールボタン（名前ラベル + 件数バッジを内包）
+# 詳細ビュー（コンポーネントクリック選択対応 QTextEdit）
+# ============================================================
+class _ComponentTextEdit(QtWidgets.QTextEdit):
+    """クリックされた位置の Maya コンポーネント（vtx[], f[], e[], map[] 等）を
+    検出して componentClicked シグナルを emit する。テキスト選択（ドラッグ）時は emit しない。"""
+    componentClicked = QtCore.Signal(str)
+
+    _COMP_PATTERN = re.compile(
+        r'(?:\|?[A-Za-z_][A-Za-z0-9_:\|]*\.)?'
+        r'(?:vtx|f|e|map|uv|cv|ep|pt)\[[0-9:,\-\s]+\]'
+    )
+
+    def mouseReleaseEvent(self, event):
+        super().mouseReleaseEvent(event)
+        if event.button() != QtCore.Qt.LeftButton:
+            return
+        # ドラッグでテキスト選択された場合は Maya 選択を発火しない
+        if self.textCursor().hasSelection():
+            return
+        cursor = self.cursorForPosition(event.pos())
+        block_text = cursor.block().text()
+        col = cursor.positionInBlock()
+        for m in self._COMP_PATTERN.finditer(block_text):
+            if m.start() <= col <= m.end():
+                self.componentClicked.emit(m.group(0))
+                return
+
+
+# ============================================================
+# ツールボタン（名前ラベルを内包）
 # ============================================================
 class _ToolButton(_DoubleClickButton):
-    """名前ラベルと件数バッジ（pill）を内包するダブルクリック対応ボタン。
+    """名前ラベルを内包するダブルクリック対応ボタン。
     QPushButton 自体の text は使わず、子 QLabel をマウス透過で配置する。"""
     def __init__(self, parent=None):
         super().__init__("", parent)
@@ -111,22 +140,13 @@ class _ToolButton(_DoubleClickButton):
         self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
 
         lay = QtWidgets.QHBoxLayout(self)
-        lay.setContentsMargins(8, 0, 6, 0)
-        lay.setSpacing(4)
+        lay.setContentsMargins(8, 0, 8, 0)
+        lay.setSpacing(0)
 
         self._name_lbl = QtWidgets.QLabel("")
         self._name_lbl.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
         self._name_lbl.setStyleSheet("background: transparent; color: #4878a0; font-size: 11px;")
-
-        self._badge_lbl = QtWidgets.QLabel("")
-        self._badge_lbl.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
-        self._badge_lbl.setStyleSheet(
-            "background: transparent; color: #e05858; font-size: 10px;"
-        )
-        self._badge_lbl.setVisible(False)
-
         lay.addWidget(self._name_lbl, 1)
-        lay.addWidget(self._badge_lbl, 0)
 
     def setName(self, text, color=None):
         self._name_lbl.setText(text)
@@ -134,13 +154,6 @@ class _ToolButton(_DoubleClickButton):
             self._name_lbl.setStyleSheet(
                 f"background: transparent; color: {color}; font-size: 11px;"
             )
-
-    def setBadge(self, text, visible=True):
-        if visible and text:
-            self._badge_lbl.setText(str(text))
-            self._badge_lbl.setVisible(True)
-        else:
-            self._badge_lbl.setVisible(False)
 
 
 # ============================================================
@@ -214,9 +227,22 @@ class _CategoryHeader(QtWidgets.QWidget):
     def isCollapsed(self):
         return self._collapsed
 
-    def setBadge(self, count):
-        if count > 0:
-            self._badge_lbl.setText(str(count))
+    def setStatus(self, err_tool_count, all_ok):
+        """err_tool_count: エラー状態のツール数（件数ではなくツール数）
+        all_ok: カテゴリ内の全ツールが OK 状態なら True → ✓ 表示"""
+        if err_tool_count > 0:
+            self._badge_lbl.setText(str(err_tool_count))
+            self._badge_lbl.setStyleSheet(
+                "background: #3a1010; color: #e05858; border-radius: 3px;"
+                " padding: 1px 6px; font-size: 10px;"
+            )
+            self._badge_lbl.setVisible(True)
+        elif all_ok:
+            self._badge_lbl.setText("✓")
+            self._badge_lbl.setStyleSheet(
+                "background: transparent; color: #28c880;"
+                " padding: 1px 2px; font-size: 11px;"
+            )
             self._badge_lbl.setVisible(True)
         else:
             self._badge_lbl.setVisible(False)
@@ -343,6 +369,19 @@ QScrollBar::handle:vertical {
 QScrollBar::handle:vertical:hover { background: #244068; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }
+QScrollBar:horizontal {
+    background: transparent;
+    height: 8px;
+    margin: 2px;
+}
+QScrollBar::handle:horizontal {
+    background: #1a3050;
+    min-width: 20px;
+    border-radius: 3px;
+}
+QScrollBar::handle:horizontal:hover { background: #244068; }
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: none; }
 QToolTip {
     background-color: #0b1628;
     color: #b8d4ee;
@@ -632,10 +671,11 @@ QFrame#statusBar {
         self.object_list.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.object_list.setStyleSheet(self._SS_OBJECT_LIST)
 
-        self.detail_view = QtWidgets.QTextEdit()
+        self.detail_view = _ComponentTextEdit()
         self.detail_view.setReadOnly(True)
         self.detail_view.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.detail_view.setStyleSheet(self._SS_DETAIL_VIEW)
+        self.detail_view.componentClicked.connect(self._on_detail_component_clicked)
 
         # HTML mockup の比率: 37% / 63%
         right_lay.addWidget(self.object_list, 37)
@@ -664,11 +704,13 @@ QFrame#statusBar {
         self._lbl_ok.setStyleSheet(f"color: #28c880; {_lbl_ss}")
         self._lbl_unchecked.setStyleSheet(f"color: #4878a0; {_lbl_ss}")
         for lbl in (self._lbl_error, self._lbl_ok, self._lbl_unchecked):
+            lbl.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft)
             status_lay.addWidget(lbl)
         status_lay.addStretch()
 
         ver_lbl = QtWidgets.QLabel(f"v{LAUNCHER_VERSION}")
         ver_lbl.setStyleSheet("color: #263c58; font-size: 10px; background: transparent;")
+        ver_lbl.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight)
         status_lay.addWidget(ver_lbl)
         root.addWidget(status)
 
@@ -785,12 +827,15 @@ QFrame#statusBar {
         info = self._category_widgets.get(cat)
         if not info:
             return
-        err_count = sum(
-            self._folder_counts.get(f, 0)
-            for f in info["folders"]
-            if self._folder_states.get(f) == _S_ERROR
+        folders = info["folders"]
+        err_tool_count = sum(
+            1 for f in folders if self._folder_states.get(f) == _S_ERROR
         )
-        info["header"].setBadge(err_count)
+        all_ok = (
+            len(folders) > 0
+            and all(self._folder_states.get(f) == _S_OK for f in folders)
+        )
+        info["header"].setStatus(err_tool_count, all_ok)
 
     # ----------------------------------------------------------
     # ボタン状態更新
@@ -807,15 +852,12 @@ QFrame#statusBar {
         if state == _S_UNCHECKED:
             btn.setStyleSheet(self._SS_BTN_UNCHECKED)
             btn.setName(f"○  {title}", "#4878a0")
-            btn.setBadge("", False)
         elif state == _S_OK:
             btn.setStyleSheet(self._SS_BTN_OK)
             btn.setName(f"✓  {title}", "#28c880")
-            btn.setBadge("", False)
         else:
             btn.setStyleSheet(self._SS_BTN_ERROR)
             btn.setName(f"✗  {title}", "#e05858")
-            btn.setBadge(str(count) if count > 0 else "", count > 0)
 
         if fix:
             show = state == _S_ERROR and self.has_fix_script.get(folder, False)
@@ -895,6 +937,27 @@ QFrame#statusBar {
         key = item.data(QtCore.Qt.UserRole)
         if key:
             self._apply_maya_selection_for_key(key, self.object_to_details.get(key, []))
+
+    def _on_detail_component_clicked(self, comp):
+        """詳細ビュー内のコンポーネント文字列がクリックされたら Maya で選択する"""
+        if not cmds:
+            return
+        # フル形式 (xxx.vtx[...]) ならそのまま、コンポーネント指定のみなら現在選択オブジェクトと結合
+        if "." in comp:
+            target = comp
+        else:
+            current = self.object_list.currentItem()
+            if not current:
+                return
+            key = current.data(QtCore.Qt.UserRole)
+            if not key or key in self._SKIP_SELECT_KEYS:
+                return
+            target = f"{key}.{comp}"
+        try:
+            if cmds.objExists(target):
+                cmds.select(target, r=True)
+        except Exception:
+            pass
 
     def on_object_selected(self, current, previous):
         self.detail_view.clear()

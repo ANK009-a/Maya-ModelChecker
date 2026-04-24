@@ -132,9 +132,9 @@ def get_results():
 
 ## ランチャーバージョン
 ```python
-LAUNCHER_VERSION = "1.2.4"  # assetChecker.py 上部
+LAUNCHER_VERSION = "1.3.0"  # assetChecker.py 上部
 ```
-ステータスバー右下に `v1.2.4` として表示される。assetChecker.py 本体を編集したらこの値をバンプする。
+ステータスバー右下に `v1.3.0` として表示される。assetChecker.py 本体を編集したらこの値をバンプする。
 
 ## 詳細表示の HTML 整形
 右パネルの詳細ビュー（`detail_view`）は `_format_details_html()` で HTML 化される：
@@ -182,15 +182,27 @@ QDialog (bg #060c18)
 - `_CategoryHeader` クリックでそのカテゴリの全ツール行を表示/非表示切替
 - 矢印 `▾`（展開）/ `▸`（折り畳み）
 - 起動時は全カテゴリ折り畳み状態
-- ヘッダー右端に **エラー件数バッジ**（カテゴリ内の合計エラー件数、0 件なら非表示）
+- ヘッダー右端のステータス表示（`setStatus(err_tool_count, all_ok)`）:
+  - 1 つでもエラーツールがあれば **エラーツール数**（件数ではなく「エラー状態のツールの数」）を赤 pill で表示
+  - 全ツールが OK 状態なら **✓**（緑）を表示
+  - それ以外（未チェック含む）は非表示
 
 ## ツールボタン構造
 `_ToolButton`（`_DoubleClickButton` を継承）：
-- 内部 QHBoxLayout で `名前 QLabel` + `件数バッジ QLabel` を配置
+- 内部 QHBoxLayout で `名前 QLabel` のみを配置（件数バッジは v1.3.0 で削除）
+- エラー件数はカテゴリヘッダー側に集約
 - 子ラベルは `Qt.WA_TransparentForMouseEvents` でクリック透過
-- `setName(text, color)` / `setBadge(text, visible)` で更新
+- `setName(text, color)` で更新
 - 状態に応じた背景は `setStyleSheet(_SS_BTN_*)` で切替
 - `setMinimumWidth(1)` でテキスト伸長による FIX 押し出し防止
+
+## 詳細ビューのコンポーネントクリック選択
+`_ComponentTextEdit`（`QTextEdit` を継承）：
+- `mouseReleaseEvent` で `vtx[..]` / `f[..]` / `e[..]` / `map[..]` / `uv[..]` / `cv[..]` / `ep[..]` / `pt[..]` パターンを検出
+- ドラッグでテキスト選択した場合は emit しない（通常のテキストコピーを阻害しない）
+- `componentClicked` シグナル → `_on_detail_component_clicked`:
+  - フル形式（`xxx.vtx[..]`）→ そのまま `cmds.select`
+  - コンポーネントのみ（`vtx[..]`）→ object_list で選択中のオブジェクト key と結合して select
 
 ## ボタン操作
 - **シングルクリック**：直近のチェック結果を右パネルに再表示（再チェックしない）
