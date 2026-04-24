@@ -132,9 +132,9 @@ def get_results():
 
 ## ランチャーバージョン
 ```python
-LAUNCHER_VERSION = "1.2.2"  # assetChecker.py 上部
+LAUNCHER_VERSION = "1.2.3"  # assetChecker.py 上部
 ```
-ステータスバー右下に `v1.2.2` として表示される。assetChecker.py 本体を編集したらこの値をバンプする。
+ステータスバー右下に `v1.2.3` として表示される。assetChecker.py 本体を編集したらこの値をバンプする。
 
 ## 詳細表示の HTML 整形
 右パネルの詳細ビュー（`detail_view`）は `_format_details_html()` で HTML 化される：

@@ -31,7 +31,7 @@ def maya_main_window():
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 GITHUB_API_INDEX    = f"{GITHUB_RAW}/tools/manifest_index.json"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.2.2"
+LAUNCHER_VERSION    = "1.2.3"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタン / トップバーボタンの高さ
 FIX_W        = 38   # FIX ボタンの幅
@@ -121,8 +121,7 @@ class _ToolButton(_DoubleClickButton):
         self._badge_lbl = QtWidgets.QLabel("")
         self._badge_lbl.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
         self._badge_lbl.setStyleSheet(
-            "background: #3a1010; color: #e05858; border-radius: 3px;"
-            " padding: 1px 5px; font-size: 10px;"
+            "background: transparent; color: #e05858; font-size: 10px;"
         )
         self._badge_lbl.setVisible(False)
 
