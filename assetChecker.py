@@ -31,7 +31,7 @@ def maya_main_window():
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 GITHUB_API_INDEX    = f"{GITHUB_RAW}/tools/manifest_index.json"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.3.1"
+LAUNCHER_VERSION    = "1.3.2"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタン / トップバーボタンの高さ
 FIX_W        = 38   # FIX ボタンの幅
@@ -191,9 +191,10 @@ class _CategoryHeader(QtWidgets.QWidget):
         self.setStyleSheet(
             "QWidget#catHeader { border-bottom: 1px solid #142030; background: transparent; }"
         )
+        self.setFixedHeight(26)
 
         lay = QtWidgets.QHBoxLayout(self)
-        lay.setContentsMargins(6, 6, 6, 3)
+        lay.setContentsMargins(6, 4, 6, 3)
         lay.setSpacing(5)
 
         self._arrow_lbl = QtWidgets.QLabel("▾")
