@@ -31,7 +31,7 @@ def maya_main_window():
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 GITHUB_API_INDEX    = f"{GITHUB_RAW}/tools/manifest_index.json"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.2.3"
+LAUNCHER_VERSION    = "1.2.4"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタン / トップバーボタンの高さ
 FIX_W        = 38   # FIX ボタンの幅
@@ -601,7 +601,7 @@ QFrame#statusBar {
         scroll = QtWidgets.QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
-        scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
         scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         scroll.setStyleSheet(
             "QScrollArea { background: transparent; border: none; }"
