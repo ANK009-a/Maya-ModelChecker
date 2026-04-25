@@ -230,7 +230,7 @@ QDialog (bg #060c18)
             │   └── "Info" QLabel (#88b8f0, 12px bold)
             └── detail_view (rounded 8px) - stretch 1
 └── ステータスバー QFrame#statusBar (h 30, bg #0b1628, top border)
-    [✗ N件エラー] [✓ N件 OK] [○ N件 未チェック] ... [v1.2.0]
+    [✗ N件エラー] [⚠ N件警告] [✓ N件 OK] [○ N件 未チェック] ... [v1.6.0]
 ```
 
 トップバー（タイトル / CHECK / ALL CHECK）は廃止。CHECK/ALL CHECK は左カラム上部・

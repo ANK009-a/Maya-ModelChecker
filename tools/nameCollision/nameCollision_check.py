@@ -30,14 +30,8 @@ _DEFAULT_EXCLUDES = {
 def get_results(exclude_defaults: bool = True):
     """
     Returns:
-        list[dict]: [
-          {
-            "transform": "<衝突している短い名前>",
-            "message": "...",
-            "details": ["|path|to|node (type)", ...]
-          },
-          ...
-        ]
+        list[CheckResult]: target に「衝突している短い名前」、details に
+        各衝突パス（"|path|to|node (type)" 形式）を入れる。
     """
     sel = _checker_selection()
     if sel:
