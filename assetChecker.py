@@ -31,7 +31,7 @@ def maya_main_window():
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 GITHUB_API_INDEX    = f"{GITHUB_RAW}/tools/manifest_index.json"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.4.0"
+LAUNCHER_VERSION    = "1.4.1"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -87,8 +87,123 @@ class _DoubleClickButton(QtWidgets.QPushButton):
 # ============================================================
 # ツールチップ即時表示フィルター
 # ============================================================
+class _CustomTooltip(QtWidgets.QFrame):
+    """Design System 仕様のカスタムツールチップ。
+    タイトル / 説明 / 区切り線 / カテゴリ・バージョンバッジを構造化表示する。"""
+
+    _SS = """
+QFrame#customTooltip {
+    background-color: #0b1628;
+    border: 1px solid #1a3050;
+    border-radius: 7px;
+}
+QLabel#ttTitle {
+    color: #88b8f0;
+    font-size: 13px;
+    font-weight: 600;
+    background: transparent;
+}
+QLabel#ttDesc {
+    color: #7a9ab8;
+    font-size: 11px;
+    background: transparent;
+}
+QLabel#ttCat {
+    color: #3a6888;
+    background-color: #0f1e34;
+    border: 1px solid #1a2e4a;
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-size: 10px;
+}
+QLabel#ttVer {
+    color: #2a5070;
+    background-color: #0f1e34;
+    border: 1px solid #1a2e4a;
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-size: 10px;
+}
+QFrame#ttDivider {
+    background-color: #1a3050;
+    border: none;
+}
+"""
+
+    def __init__(self, parent=None):
+        # ToolTip フラグでフォーカスを奪わずに最前面表示
+        super().__init__(parent, QtCore.Qt.ToolTip | QtCore.Qt.FramelessWindowHint)
+        self.setObjectName("customTooltip")
+        self.setStyleSheet(self._SS)
+        self.setMaximumWidth(260)
+        self.setAttribute(QtCore.Qt.WA_ShowWithoutActivating)
+
+        lay = QtWidgets.QVBoxLayout(self)
+        lay.setContentsMargins(12, 10, 12, 10)
+        lay.setSpacing(6)
+
+        self.title_lbl = QtWidgets.QLabel()
+        self.title_lbl.setObjectName("ttTitle")
+        self.title_lbl.setWordWrap(True)
+
+        self.divider = QtWidgets.QFrame()
+        self.divider.setObjectName("ttDivider")
+        self.divider.setFixedHeight(1)
+
+        self.desc_lbl = QtWidgets.QLabel()
+        self.desc_lbl.setObjectName("ttDesc")
+        self.desc_lbl.setWordWrap(True)
+
+        meta_w = QtWidgets.QWidget()
+        meta_w.setStyleSheet("background: transparent;")
+        meta_lay = QtWidgets.QHBoxLayout(meta_w)
+        meta_lay.setContentsMargins(0, 0, 0, 0)
+        meta_lay.setSpacing(8)
+
+        self.cat_lbl = QtWidgets.QLabel()
+        self.cat_lbl.setObjectName("ttCat")
+        self.ver_lbl = QtWidgets.QLabel()
+        self.ver_lbl.setObjectName("ttVer")
+
+        meta_lay.addWidget(self.cat_lbl)
+        meta_lay.addWidget(self.ver_lbl)
+        meta_lay.addStretch(1)
+
+        lay.addWidget(self.title_lbl)
+        lay.addWidget(self.divider)
+        lay.addWidget(self.desc_lbl)
+        lay.addWidget(meta_w)
+
+    def set_data(self, title, desc, category, version):
+        self.title_lbl.setText(title or "")
+        self.desc_lbl.setText(desc or "")
+        self.desc_lbl.setVisible(bool(desc))
+        self.divider.setVisible(bool(desc))
+        self.cat_lbl.setText(category or "")
+        self.cat_lbl.setVisible(bool(category))
+        self.ver_lbl.setText(f"v{version}" if version else "")
+        self.ver_lbl.setVisible(bool(version))
+        self.adjustSize()
+
+    def show_at(self, global_pos):
+        """指定位置に表示。画面端では反対側に回り込ませる"""
+        self.adjustSize()
+        try:
+            screen = QtWidgets.QApplication.desktop().availableGeometry(global_pos)
+        except Exception:
+            screen = QtWidgets.QApplication.desktop().availableGeometry()
+        x = global_pos.x()
+        y = global_pos.y()
+        if x + self.width() > screen.right() - 8:
+            x = max(screen.left() + 8, screen.right() - self.width() - 8)
+        if y + self.height() > screen.bottom() - 8:
+            y = max(screen.top() + 8, global_pos.y() - self.height() - 14)
+        self.move(x, y)
+        self.show()
+
+
 class _InstantTooltipFilter(QtCore.QObject):
-    """ホバー後 _interval ms（既定 400ms）でツールチップを表示するイベントフィルター"""
+    """ホバー後 _interval ms（既定 400ms）でカスタムツールチップを表示する"""
     _interval = 400
 
     def __init__(self, parent=None):
@@ -97,15 +212,24 @@ class _InstantTooltipFilter(QtCore.QObject):
         self._timer.setSingleShot(True)
         self._timer.timeout.connect(self._show_for_target)
         self._target = None
+        self._tip = _CustomTooltip()
+        self._data_map = {}  # widget -> (title, desc, category, version)
+
+    def register(self, widget, title, desc, category, version):
+        """ウィジェットにツールチップ情報を登録し、イベントフィルターを取り付ける"""
+        self._data_map[widget] = (title, desc, category, version)
+        widget.installEventFilter(self)
 
     def _show_for_target(self):
         obj = self._target
         if not obj:
             return
-        tip = obj.toolTip()
-        if tip:
-            pos = obj.mapToGlobal(QtCore.QPoint(0, obj.height() + 4))
-            QtWidgets.QToolTip.showText(pos, tip, obj)
+        data = self._data_map.get(obj)
+        if not data:
+            return
+        self._tip.set_data(*data)
+        pos = obj.mapToGlobal(QtCore.QPoint(0, obj.height() + 4))
+        self._tip.show_at(pos)
 
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.Enter:
@@ -114,7 +238,7 @@ class _InstantTooltipFilter(QtCore.QObject):
         elif event.type() == QtCore.QEvent.Leave:
             self._timer.stop()
             self._target = None
-            QtWidgets.QToolTip.hideText()
+            self._tip.hide()
         return False
 
 
@@ -888,25 +1012,7 @@ QFrame#statusBar {
             btn.doubleClicked.connect(lambda f=folder: self.run_check(f, show_details=True))
 
             if title or desc:
-                meta_parts = []
-                if cat:
-                    meta_parts.append(f"<span style='color:#7aa3d0;'>{cat}</span>")
-                if ver:
-                    meta_parts.append(f"<span style='color:#6a89a8;'>v{ver}</span>")
-                meta_html = (
-                    f"<td align='right' valign='bottom'>"
-                    f"<span style='font-size:9px;'>{'  '.join(meta_parts)}</span></td>"
-                    if meta_parts else ""
-                )
-                btn.setToolTip(
-                    f"<table width='100%' cellspacing='0' cellpadding='0'><tr>"
-                    f"<td><b style='font-size:13px;'>{title}</b></td>"
-                    f"{meta_html}"
-                    f"</tr></table>"
-                    f"<hr style='border:1px solid #1a3050; margin:4px 0;'>"
-                    f"<span style='line-height:1.6;'>{desc}</span>"
-                )
-                btn.installEventFilter(self._tooltip_filter)
+                self._tooltip_filter.register(btn, title, desc, cat, ver)
             row_lay.addWidget(btn)
             self._check_btns[folder] = btn
 

@@ -224,9 +224,15 @@ QDialog (bg #060c18)
 
 ## ツールチップ方針
 - manifest_index.json の `title` / `description` / `version` / `category` から動的生成
-- ツールチップ右下に `カテゴリ名  v1.0.1` を右寄せ表示（`<table>` で右寄せ）
-- HTML タグ（`<b>`, `<br>` など）使用可
-- 即時表示：`_InstantTooltipFilter`（`QEvent.Enter` で `QToolTip.showText()` 直呼び）
+- カスタムウィジェット `_CustomTooltip`（`QFrame` ベース）で構造化表示
+  - タイトル（13px / 600 / `#88b8f0`）
+  - 区切り線（`#1a3050`、1px）
+  - 説明文（11px / `#7a9ab8`、word wrap）
+  - カテゴリ・バージョンバッジ（10px、`#0f1e34` bg + `#1a2e4a` border + 角丸 3px）
+- 表示タイミング: ホバー後 **400ms 遅延**（`_InstantTooltipFilter._interval = 400`）
+  - `QEvent.Enter` でタイマー起動、`QEvent.Leave` でキャンセル & 非表示
+- 登録方法: `self._tooltip_filter.register(widget, title, desc, category, version)`
+  （旧 `btn.setToolTip(html)` + `installEventFilter` は廃止）
 
 ## テーマカラー（v1.2.0 〜）
 | 用途 | カラーコード |
