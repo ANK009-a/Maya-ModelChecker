@@ -7,10 +7,12 @@ UV Set check (extra UV sets)
   1) 必須UVセット "map1" が無い
   2) "map1" / ホワイトリスト 以外のUVセットが 2 個以上ある
   3) "map1" / ホワイトリスト 以外のUVセットが 1 個だが、どこにも接続されていない
+  4) PencilSelectedEdgeUVSet（PencilSelectedEdge プレフィックス）が 3 個以上ある
 
 ホワイトリスト（WHITELIST_UVSETS）に含まれる UVSet は、
 Pencil+ 等のプラグインが独自に名前参照するため接続検出ができない。
-これらは「正常運用」として常にスキップする。
+これらは「正常運用」として通常はスキップするが、PencilSelectedEdge*
+が 3 個以上ある場合は不正生成の可能性として検出対象とする。
 
 UI連携（assetChecker想定）:
 - get_results() が list[dict] を返す（問題が無ければ []）
@@ -37,6 +39,9 @@ WHITELIST_EXACT = frozenset([
 WHITELIST_PREFIXES = (
     "PencilSelectedEdge",
 )
+
+# PencilSelectedEdge* がこの個数以上ある場合は異常として検出
+PENCIL_MAX_OK = 2
 
 
 def _is_whitelisted_uvset(name: str) -> bool:
@@ -112,8 +117,12 @@ def get_results() -> list[dict]:
             if u != REQUIRED_UVSET and not _is_whitelisted_uvset(u)
         ]
 
-        # map1 あり ＆ 判定対象 extra が 0 → 問題なし
-        if has_required and not extra:
+        # PencilSelectedEdge* は通常ホワイトリストだが、過剰生成は異常として検出
+        pencil_uvsets = [u for u in uv_sets if u.startswith("PencilSelectedEdge")]
+        pencil_too_many = len(pencil_uvsets) > PENCIL_MAX_OK
+
+        # map1 あり ＆ 判定対象 extra が 0 ＆ Pencil 過剰なし → 問題なし
+        if has_required and not extra and not pencil_too_many:
             continue
 
         # 余分 UVSet のうち「未接続」のものを抽出
@@ -122,8 +131,8 @@ def get_results() -> list[dict]:
             if not _uvset_has_downstream_connection(shape, n)
         ]
 
-        # map1 あり ＆ 余分 1 個 ＆ それが接続済み → 正常運用とみなしてスキップ
-        if has_required and len(extra) == 1 and not unconnected_extras:
+        # map1 あり ＆ 余分 1 個 ＆ それが接続済み ＆ Pencil 過剰なし → 正常運用とみなしてスキップ
+        if has_required and len(extra) == 1 and not unconnected_extras and not pencil_too_many:
             continue
 
         issues = []
@@ -133,8 +142,9 @@ def get_results() -> list[dict]:
             issues.append(f"余分な UVSet {len(extra)} 件")
         if unconnected_extras:
             issues.append(f"未接続 UVSet {len(unconnected_extras)} 件")
+        if pencil_too_many:
+            issues.append(f"PencilSelectedEdgeUVSet {len(pencil_uvsets)} 個（{PENCIL_MAX_OK} 個以下が正常）")
 
-        # 上記ケースのいずれにも該当しない（= map1 あり ＆ 余分 1 個 ＆ 接続あり）は continue 済み
         if not issues:
             continue
 
@@ -143,6 +153,11 @@ def get_results() -> list[dict]:
         for name in uv_sets:
             if name == REQUIRED_UVSET:
                 details.append(f"{name} (required)")
+            elif name.startswith("PencilSelectedEdge"):
+                if pencil_too_many:
+                    details.append(f"⚠ {name} (Pencil: {len(pencil_uvsets)} 個)")
+                else:
+                    details.append(f"{name} (whitelisted)")
             elif _is_whitelisted_uvset(name):
                 details.append(f"{name} (whitelisted)")
             elif name in unconnected_extras:

@@ -10,6 +10,7 @@
   {"folder": "reversedNormal", "category": "Mesh 形状系",   "title": "Reversed Normal",      "description": "法線が逆向きのフェースを検出します。",                                                                            "has_fix": true,  "version": "1.0.3"},
   {"folder": "isolateVtx",     "category": "Mesh 形状系",   "title": "Isolated Vertex",      "description": "エッジやフェースに接続されていない孤立頂点を検出します。",                                                         "has_fix": false, "version": "1.0.2"},
   {"folder": "overlappingVtx", "category": "Mesh 形状系",   "title": "Overlapping Vertex",   "description": "同一座標に重複して存在する頂点を検出します。",                                                                     "has_fix": true,  "version": "1.0.3"},
+  {"folder": "nonPlanarFace",  "category": "Mesh 形状系",   "title": "Non-planar Face",      "description": "頂点が同一平面に乗っていない face（4 頂点以上）を検出します。修正は破壊的なため手動推奨。",                          "has_fix": false, "version": "1.0.0"},
 
   {"folder": "history",        "category": "Mesh 属性系",   "title": "Construction History", "description": "コンストラクションヒストリーが残っている mesh を検出します。",                                                     "has_fix": true,  "version": "1.0.3"},
   {"folder": "vtxTweak",       "category": "Mesh 属性系",   "title": "Vertex Tweak",         "description": "頂点トゥイーク (pnts 配列) が残っている mesh を検出します。",                                                     "has_fix": true,  "version": "1.0.3"},
@@ -17,12 +18,17 @@
   {"folder": "colorSet",       "category": "Mesh 属性系",   "title": "Color Set",            "description": "カラーセットを持つ mesh を検出します。",                                                                              "has_fix": true,  "version": "1.0.3"},
   {"folder": "meshShapeName",  "category": "Mesh 属性系",   "title": "Mesh Shape Name",      "description": "transform 名と Shape 名が一致しない mesh を検出します。",                                                          "has_fix": true,  "version": "1.0.3"},
 
-  {"folder": "uv(0.0-1.0)",   "category": "UV 系",         "title": "UV Range",             "description": "UV 座標が 0〜1 の範囲外にある mesh を検出します。",                                                               "has_fix": false, "version": "1.0.2"},
-  {"folder": "uvSet(extra)",   "category": "UV 系",         "title": "UV Set (Extra)",       "description": "map1 以外の余分な UV セットを持つ mesh を検出します。",                                                           "has_fix": false, "version": "1.0.2"},
+  {"folder": "uv(0.0-1.0)",   "category": "UV 系",         "title": "UV Range",             "description": "UV 座標が 0〜1 の範囲外にある mesh を検出します。PencilSelectedEdgeUVSet は対象外。",                            "has_fix": false, "version": "1.1.0"},
+  {"folder": "uvSet(extra)",   "category": "UV 系",         "title": "UV Set (Extra)",       "description": "map1 以外の余分な UV セットを持つ mesh を検出します。PencilSelectedEdgeUVSet が 3 個以上の場合も検出。",         "has_fix": false, "version": "1.1.0"},
   {"folder": "uvSet(error)",   "category": "UV 系",         "title": "UV Set (Error)",       "description": "UV Set Editor に表示されないが UV データを保持している UVset を検出します。",                                      "has_fix": true,  "version": "1.0.3"},
 
   {"folder": "texturePath",    "category": "テクスチャ系",  "title": "Texture Path",         "description": "パス未設定またはファイルが存在しない file ノードを検出します。",                                                  "has_fix": false, "version": "1.1.2"},
 
   {"folder": "nameCollision",  "category": "シーン系",      "title": "Name Collision",       "description": "シーン内に同名のノードが複数存在する場合を検出します。",                                                            "has_fix": false, "version": "1.0.2"},
-  {"folder": "animationKey",   "category": "シーン系",      "title": "Animation Key",        "description": "アニメーションキー（animCurve）と animLayer（BaseAnimation 含む）を検出します。",                                      "has_fix": true,  "version": "1.1.3"}
+  {"folder": "animationKey",   "category": "シーン系",      "title": "Animation Key",        "description": "アニメーションキー（animCurve）と animLayer（BaseAnimation 含む）を検出します。",                                      "has_fix": true,  "version": "1.1.3"},
+  {"folder": "displayLayer",   "category": "シーン系",      "title": "Display / Render Layer", "description": "defaultLayer / defaultRenderLayer 以外の displayLayer・renderLayer を検出します。",                                "has_fix": true,  "version": "1.0.0"},
+  {"folder": "unusedShadingNode", "category": "シーン系",   "title": "Unused Shading Node",  "description": "shadingEngine に到達しない未使用シェーディングノード（マテリアル / テクスチャ / utility）を検出します。",         "has_fix": true,  "version": "1.0.0"},
+  {"folder": "unknownNode",    "category": "シーン系",      "title": "Unknown Node / Plugin", "description": "unknown ノード（型: unknown / unknownDag / unknownTransform）と、シーンに残っている未ロードプラグイン参照を検出します。", "has_fix": true,  "version": "1.0.0"},
+  {"folder": "namespace",      "category": "シーン系",      "title": "Namespace",            "description": "デフォルト（UI / shared / :）以外の namespace を検出します。FIX で root に merge して削除します（リファレンス由来は除く）。",   "has_fix": true,  "version": "1.0.0"},
+  {"folder": "scriptNode",     "category": "シーン系",      "title": "Script Node / Expression", "description": "scriptNode と expression を検出します。Open/Close 系 scriptNode はファイル開閉時に実行されるため、内容を確認の上で手動削除を推奨。", "has_fix": false, "version": "1.0.0"}
 ]

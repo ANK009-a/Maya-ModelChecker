@@ -11,6 +11,7 @@ UVSpace(0.0-1.0)_check_fast.py
 仕様:
 - 選択不要（常にシーン内の non-intermediate mesh を全件対象）
 - 全UVセットを対象に、UVが0.0〜1.0範囲外のセットがある mesh を返す
+- PencilSelectedEdge* は Pencil+ プラグインが内部で利用する UVSet のため判定対象外
 - OpenMaya(maya.api.OpenMaya) が使えない環境では何もしない（元スクリプトと同じ方針）
 """
 
@@ -30,6 +31,11 @@ except Exception:
     om2 = None
 
 EPS = 1e-9  # 端の誤差許容
+
+# 判定対象外の UVSet 名プレフィックス（Pencil+ プラグイン由来）
+EXCLUDE_UVSET_PREFIXES = (
+    "PencilSelectedEdge",
+)
 
 
 def _get_mfnmesh(shape: str):
@@ -131,6 +137,8 @@ def get_results():
 
         bad_sets = []  # (uvSetName, info)
         for uv_set in uv_sets:
+            if uv_set.startswith(EXCLUDE_UVSET_PREFIXES):
+                continue
             has_err, info = _uv_out_of_range_info_onepass(mfn, uv_set)
             if has_err and info:
                 bad_sets.append((uv_set, info))

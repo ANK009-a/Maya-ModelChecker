@@ -1,0 +1,71 @@
+# -*- coding: utf-8 -*-
+"""
+displayLayer_check.py
+
+check処理:
+defaultLayer / defaultRenderLayer 以外の displayLayer・renderLayer を検出します。
+
+対象（シーン全体・選択に関係なく常に全件）:
+- displayLayer: defaultLayer を除く
+- renderLayer:  defaultRenderLayer を除く（レガシー render layer）
+"""
+import maya.cmds as cmds
+
+
+_DEFAULT_DISPLAY = "defaultLayer"
+_DEFAULT_RENDER = "defaultRenderLayer"
+
+
+def _layers(node_type, default_name):
+    nodes = cmds.ls(type=node_type) or []
+    return [n for n in nodes if n != default_name]
+
+
+def _is_locked(node):
+    try:
+        v = cmds.lockNode(node, query=True, lock=True)
+        return bool(v[0]) if v else False
+    except Exception:
+        return False
+
+
+def get_results():
+    results = []
+
+    for n in sorted(_layers("displayLayer", _DEFAULT_DISPLAY)):
+        members = cmds.editDisplayLayerMembers(n, query=True, fullNames=True) or []
+        details = ["Type: displayLayer", f"Members: {len(members)}"]
+        if members:
+            preview = members[:10]
+            details.append("  " + ", ".join(preview))
+            if len(members) > 10:
+                details.append(f"  ... 他 {len(members) - 10} 件")
+        if _is_locked(n):
+            details.append("⚠ lockNode で保護されています（FIX 時に解除します）")
+        results.append({
+            "transform": n,
+            "message": f"displayLayer: {n}",
+            "details": details,
+        })
+
+    for n in sorted(_layers("renderLayer", _DEFAULT_RENDER)):
+        details = ["Type: renderLayer (legacy)"]
+        if _is_locked(n):
+            details.append("⚠ lockNode で保護されています（FIX 時に解除します）")
+        results.append({
+            "transform": n,
+            "message": f"renderLayer: {n}",
+            "details": details,
+        })
+
+    return results
+
+
+if __name__ == "__main__":
+    res = get_results()
+    if not res:
+        print("[displayLayer] 該当ノードは見つかりませんでした。")
+    else:
+        print(f"[displayLayer] {len(res)} 件")
+        for r in res:
+            print(r["message"])
