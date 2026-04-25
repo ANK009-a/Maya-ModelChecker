@@ -13,7 +13,7 @@ try:
     import maya.cmds as cmds
 except Exception:
     cmds = None
-from PySide2 import QtWidgets, QtCore
+from PySide2 import QtWidgets, QtCore, QtGui
 from shiboken2 import wrapInstance
 
 
@@ -31,7 +31,7 @@ def maya_main_window():
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 GITHUB_API_INDEX    = f"{GITHUB_RAW}/tools/manifest_index.json"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.4.1"
+LAUNCHER_VERSION    = "1.4.2"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -185,25 +185,31 @@ QFrame#ttDivider {
         self.ver_lbl.setVisible(bool(version))
         self.adjustSize()
 
-    def show_at(self, global_pos):
-        """指定位置に表示。画面端では反対側に回り込ませる"""
+    def show_near_cursor(self, cursor_global_pos, offset=14):
+        """カーソル位置 + offset の右下に表示。画面端では反対側へ回り込み"""
         self.adjustSize()
         try:
-            screen = QtWidgets.QApplication.desktop().availableGeometry(global_pos)
+            screen = QtWidgets.QApplication.desktop().availableGeometry(cursor_global_pos)
         except Exception:
             screen = QtWidgets.QApplication.desktop().availableGeometry()
-        x = global_pos.x()
-        y = global_pos.y()
+        cx, cy = cursor_global_pos.x(), cursor_global_pos.y()
+        x = cx + offset
+        y = cy + offset
         if x + self.width() > screen.right() - 8:
-            x = max(screen.left() + 8, screen.right() - self.width() - 8)
+            x = cx - self.width() - 8
         if y + self.height() > screen.bottom() - 8:
-            y = max(screen.top() + 8, global_pos.y() - self.height() - 14)
+            y = cy - self.height() - 8
+        # 画面外に出ないようクランプ
+        x = max(screen.left() + 8, x)
+        y = max(screen.top() + 8, y)
         self.move(x, y)
-        self.show()
+        if not self.isVisible():
+            self.show()
 
 
 class _InstantTooltipFilter(QtCore.QObject):
-    """ホバー後 _interval ms（既定 400ms）でカスタムツールチップを表示する"""
+    """ホバー後 _interval ms（既定 400ms）でカスタムツールチップを表示し、
+    マウス移動に追従させる。"""
     _interval = 400
 
     def __init__(self, parent=None):
@@ -216,8 +222,13 @@ class _InstantTooltipFilter(QtCore.QObject):
         self._data_map = {}  # widget -> (title, desc, category, version)
 
     def register(self, widget, title, desc, category, version):
-        """ウィジェットにツールチップ情報を登録し、イベントフィルターを取り付ける"""
+        """ウィジェットにツールチップ情報を登録し、イベントフィルターを取り付ける。
+        MouseMove を受け取るために setMouseTracking(True) も有効化する。"""
         self._data_map[widget] = (title, desc, category, version)
+        try:
+            widget.setMouseTracking(True)
+        except Exception:
+            pass
         widget.installEventFilter(self)
 
     def _show_for_target(self):
@@ -228,17 +239,19 @@ class _InstantTooltipFilter(QtCore.QObject):
         if not data:
             return
         self._tip.set_data(*data)
-        pos = obj.mapToGlobal(QtCore.QPoint(0, obj.height() + 4))
-        self._tip.show_at(pos)
+        self._tip.show_near_cursor(QtGui.QCursor.pos())
 
     def eventFilter(self, obj, event):
-        if event.type() == QtCore.QEvent.Enter:
+        et = event.type()
+        if et == QtCore.QEvent.Enter:
             self._target = obj
             self._timer.start(self._interval)
-        elif event.type() == QtCore.QEvent.Leave:
+        elif et == QtCore.QEvent.Leave:
             self._timer.stop()
             self._target = None
             self._tip.hide()
+        elif et == QtCore.QEvent.MouseMove and self._target is obj and self._tip.isVisible():
+            self._tip.show_near_cursor(QtGui.QCursor.pos())
         return False
 
 
