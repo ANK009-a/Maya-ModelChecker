@@ -126,8 +126,8 @@ def get_results():
 ## レイアウト定数（変更時は必ず関連箇所も合わせて更新）
 | 定数 | 値 | 説明 |
 |------|-----|------|
-| `LEFT_PANEL_W` | 204 | 左パネル全体の幅 px（CHECK/ALL CHECK ボタンとツール一覧を内包） |
-| `BTN_H`        | 28  | ツールボタン / トップバーボタンの高さ px |
+| `LEFT_PANEL_W` | 204 | 左カラム全体の幅 px（CHECK/ALL CHECK ボタンと左パネル本体を内包） |
+| `BTN_H`        | 28  | ツールボタン / CHECK・ALL CHECK ボタンの高さ px |
 | `FIX_W`        | 38  | FIX ボタンの幅 px |
 
 ## ランチャーバージョン
@@ -158,27 +158,29 @@ self.resize(600, 700)  # __init__ 内
 ```
 QDialog (bg #060c18)
 └── body (margin 10, spacing 10)
-    ├── 左パネル QFrame#leftPanel (rounded 8px, bg #0b1628, border #1a2e4a, fixedW 204)
-    │   ├── 上部ボタン QHBoxLayout (margin 7,7,7,0, spacing 6)
-    │   │   ├── CHECK (BTN_H=28)
-    │   │   └── ALL CHECK (BTN_H=28)
-    │   └── ツール一覧 QScrollArea (transparent, no border)
-    │       └── rows_layout QVBoxLayout (margin 7, spacing 3)
-    │           ├── _CategoryHeader (Transform 系)
-    │           ├── tool row (QWidget) × N
-    │           ├── _CategoryHeader (Mesh 形状系)
-    │           ├── ...
-    │           └── stretch
+    ├── left_container QVBoxLayout (transparent, fixedW 204, spacing 4)
+    │   ├── 上部ボタン行 QHBoxLayout (spacing 6) ← 枠外
+    │   │   ├── CHECK (BTN_H=28, Expanding)
+    │   │   └── ALL CHECK (BTN_H=28, Expanding)
+    │   └── 左パネル QFrame#leftPanel (rounded 8px, bg #0b1628, border #1a2e4a)
+    │       └── ツール一覧 QScrollArea (transparent, no border)
+    │           └── rows_layout QVBoxLayout (margin 7, spacing 3)
+    │               ├── _CategoryHeader (Transform 系)
+    │               ├── tool row (QWidget) × N
+    │               ├── _CategoryHeader (Mesh 形状系)
+    │               ├── ...
+    │               └── stretch
     └── 右パネル QHBoxLayout (spacing 8)
         ├── list_container QVBoxLayout (spacing 4) - stretch 37
-        │   ├── object_list_title QLabel (現在のツール名表示)
+        │   ├── object_list_title QLabel (現在のツール名表示) ← 枠外
         │   └── object_list (rounded 8px) - stretch 1
         └── detail_view  (rounded 8px) - stretch 63
 └── ステータスバー QFrame#statusBar (h 30, bg #0b1628, top border)
     [✗ N件エラー] [✓ N件 OK] [○ N件 未チェック] ... [v1.2.0]
 ```
 
-トップバー（タイトル / CHECK / ALL CHECK）は廃止。CHECK/ALL CHECK は左パネル上部に移動。
+トップバー（タイトル / CHECK / ALL CHECK）は廃止。CHECK/ALL CHECK は左カラム上部・
+左パネル枠の**外側**に配置（右パネルの object_list_title と同じ枠外配置）。
 
 ## カテゴリ折り畳み
 - `_CategoryHeader` クリックでそのカテゴリの全ツール行を表示/非表示切替

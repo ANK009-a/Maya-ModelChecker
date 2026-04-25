@@ -31,7 +31,7 @@ def maya_main_window():
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 GITHUB_API_INDEX    = f"{GITHUB_RAW}/tools/manifest_index.json"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.3.5"
+LAUNCHER_VERSION    = "1.3.6"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタン / トップバーボタンの高さ
 FIX_W        = 38   # FIX ボタンの幅
@@ -636,20 +636,21 @@ QFrame#statusBar {
         body_lay.setContentsMargins(10, 10, 10, 10)
         body_lay.setSpacing(10)
 
-        # ---- 左パネル ----
-        left_panel = QtWidgets.QFrame()
-        left_panel.setObjectName("leftPanel")
-        left_panel.setStyleSheet(self._SS_LEFT_PANEL)
-        left_panel.setFixedWidth(LEFT_PANEL_W)
-        left_lay = QtWidgets.QVBoxLayout(left_panel)
-        left_lay.setContentsMargins(0, 0, 0, 0)
-        left_lay.setSpacing(0)
+        # ---- 左カラム（CHECK/ALL CHECK + 左パネル）----
+        # 右パネルの list_container（タイトル + object_list）と同じ構造で、
+        # ボタンは枠（leftPanel）の外側に配置する
+        left_container = QtWidgets.QWidget()
+        left_container.setStyleSheet("background: transparent;")
+        left_container.setFixedWidth(LEFT_PANEL_W)
+        left_container_lay = QtWidgets.QVBoxLayout(left_container)
+        left_container_lay.setContentsMargins(0, 0, 0, 0)
+        left_container_lay.setSpacing(4)
 
-        # 左パネル上部: CHECK / ALL CHECK ボタン
+        # 上部: CHECK / ALL CHECK ボタン（枠外）
         top_btn_w = QtWidgets.QWidget()
         top_btn_w.setStyleSheet("background: transparent;")
         top_btn_lay = QtWidgets.QHBoxLayout(top_btn_w)
-        top_btn_lay.setContentsMargins(7, 7, 7, 0)
+        top_btn_lay.setContentsMargins(0, 0, 0, 0)
         top_btn_lay.setSpacing(6)
 
         self.check_btn = QtWidgets.QPushButton("CHECK")
@@ -657,18 +658,26 @@ QFrame#statusBar {
         self.check_btn.setStyleSheet(self._SS_BTN_CHECK)
         self.check_btn.clicked.connect(self.start_check)
         self.check_btn.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        self.check_btn.setMinimumWidth(1)
 
         self.all_check_btn = QtWidgets.QPushButton("ALL CHECK")
         self.all_check_btn.setFixedHeight(BTN_H)
         self.all_check_btn.setStyleSheet(self._SS_BTN_ALL)
         self.all_check_btn.clicked.connect(self.start_all_check)
         self.all_check_btn.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        self.all_check_btn.setMinimumWidth(1)
 
         top_btn_lay.addWidget(self.check_btn)
         top_btn_lay.addWidget(self.all_check_btn)
-        left_lay.addWidget(top_btn_w)
 
-        # 左パネル下部: ツール一覧（スクロール）
+        # 左パネル本体（角丸枠 + ツール一覧）
+        left_panel = QtWidgets.QFrame()
+        left_panel.setObjectName("leftPanel")
+        left_panel.setStyleSheet(self._SS_LEFT_PANEL)
+        left_lay = QtWidgets.QVBoxLayout(left_panel)
+        left_lay.setContentsMargins(0, 0, 0, 0)
+        left_lay.setSpacing(0)
+
         scroll = QtWidgets.QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
@@ -689,7 +698,10 @@ QFrame#statusBar {
         self.left_inner  = left_inner
         left_lay.addWidget(scroll, 1)
 
-        body_lay.addWidget(left_panel)
+        left_container_lay.addWidget(top_btn_w)
+        left_container_lay.addWidget(left_panel, 1)
+
+        body_lay.addWidget(left_container)
 
         # ---- 右パネル（オブジェクトリスト + 詳細ビュー）----
         right_w = QtWidgets.QWidget()
