@@ -4,7 +4,7 @@
   {"folder": "freeze",         "category": "Transform 系",  "title": "Freeze Transform",     "description": "移動・回転・スケール値がフリーズされていない transform を検出します。",                                             "has_fix": true,  "version": "1.0.3"},
   {"folder": "pivot",          "category": "Transform 系",  "title": "Pivot",                "description": "ピボットがワールド原点にない mesh を検出します。",                                                                 "has_fix": false, "version": "1.0.2"},
   {"folder": "negativeScale",  "category": "Transform 系",  "title": "Negative Scale",       "description": "スケール値がマイナスの transform を検出します。",                                                                  "has_fix": true,  "version": "1.0.3"},
-  {"folder": "animCurve",      "category": "Transform 系",  "title": "Animation Curve",      "description": "animCurve ノード（アニメーションキー）を検出します。選択がある場合はその配下のみ。",                                "has_fix": true,  "version": "1.0.0"},
+  {"folder": "animCurve",      "category": "Transform 系",  "title": "Animation Key",        "description": "animCurve ノード（アニメーションキー）を検出します。選択がある場合はその配下のみ。",                                "has_fix": true,  "version": "1.1.0"},
 
   {"folder": "nonManifold",    "category": "Mesh 形状系",   "title": "Non-Manifold",         "description": "非多様体エッジ・頂点を検出します。",                                                                              "has_fix": false, "version": "1.0.2"},
   {"folder": "laminaFace",     "category": "Mesh 形状系",   "title": "Lamina Face",          "description": "同じ頂点を共有する重複フェース（ラミナフェース）を検出します。",                                                    "has_fix": true,  "version": "1.0.3"},
@@ -14,11 +14,11 @@
   {"folder": "nonPlanarFace",  "category": "Mesh 形状系",   "title": "Non-planar Face",      "description": "頂点が同一平面に乗っていない face（4 頂点以上）を検出します。修正は破壊的なため手動推奨。",                          "has_fix": false, "version": "1.0.0"},
   {"folder": "nGon",           "category": "Mesh 形状系",   "title": "N-gon",                "description": "5 角以上のフェース（N-gon）を検出します。修正は破壊的なため手動推奨。",                                            "has_fix": false, "version": "1.0.0"},
 
-  {"folder": "history",        "category": "Mesh 属性系",   "title": "Construction History", "description": "コンストラクションヒストリーが残っている mesh を検出します。",                                                     "has_fix": true,  "version": "1.0.3"},
-  {"folder": "vtxTweak",       "category": "Mesh 属性系",   "title": "Vertex Tweak",         "description": "頂点トゥイーク (pnts 配列) が残っている mesh を検出します。",                                                     "has_fix": true,  "version": "1.0.3"},
+  {"folder": "history",        "category": "Mesh 属性系",   "title": "History",              "description": "コンストラクションヒストリーが残っている mesh を検出します。",                                                     "has_fix": true,  "version": "1.1.0"},
+  {"folder": "vtxTweak",       "category": "Mesh 属性系",   "title": "Vertex CVs",           "description": "頂点トゥイーク (pnts 配列) が残っている mesh を検出します。",                                                     "has_fix": true,  "version": "1.1.0"},
   {"folder": "lockNormal",     "category": "Mesh 属性系",   "title": "Locked Normal",        "description": "ロックされた法線 (Freeze Normals) を持つ mesh を検出します。",                                                     "has_fix": true,  "version": "1.0.3"},
   {"folder": "colorSet",       "category": "Mesh 属性系",   "title": "Color Set",            "description": "カラーセットを持つ mesh を検出します。",                                                                              "has_fix": true,  "version": "1.0.3"},
-  {"folder": "meshShapeName",  "category": "Mesh 属性系",   "title": "Mesh Shape Name",      "description": "transform 名と Shape 名が一致しない mesh を検出します。",                                                          "has_fix": true,  "version": "1.0.3"},
+  {"folder": "meshShapeName",  "category": "Mesh 属性系",   "title": "Shape Name",           "description": "transform 名と Shape 名が一致しない mesh を検出します。",                                                          "has_fix": true,  "version": "1.1.0"},
 
   {"folder": "uv(0.0-1.0)",   "category": "UV 系",         "title": "UV Range",             "description": "UV 座標が 0〜1 の範囲外にある mesh を検出します。PencilSelectedEdgeUVSet は対象外。",                            "has_fix": false, "version": "1.1.0"},
   {"folder": "uvSet(extra)",   "category": "UV 系",         "title": "UV Set (Extra)",       "description": "map1 以外の余分な UV セットを持つ mesh を検出します。PencilSelectedEdgeUVSet が 3 個以上の場合も検出。",         "has_fix": false, "version": "1.1.1"},
@@ -28,7 +28,7 @@
   {"folder": "localTexturePath", "category": "テクスチャ系", "title": "Local Texture Path",   "description": "ローカルドライブを参照している file ノードを検出します。共有ドライブ（UNC / ネットワークドライブ）は OK 扱い。",      "has_fix": false, "version": "1.0.0"},
 
   {"folder": "nameCollision",  "category": "シーン系",      "title": "Name Collision",       "description": "シーン内に同名のノードが複数存在する場合を検出します。",                                                            "has_fix": false, "version": "1.0.2"},
-  {"folder": "animLayer",      "category": "シーン系",      "title": "Animation Layer",      "description": "animLayer ノード（BaseAnimation 含む）を検出します。シーン全体が常に対象。",                                       "has_fix": true,  "version": "1.0.0"},
+  {"folder": "animLayer",      "category": "シーン系",      "title": "Anim Layer",           "description": "animLayer ノード（BaseAnimation 含む）を検出します。シーン全体が常に対象。",                                       "has_fix": true,  "version": "1.1.0"},
   {"folder": "displayLayer",   "category": "シーン系",      "title": "Display / Render Layer", "description": "defaultLayer / defaultRenderLayer 以外の displayLayer・renderLayer を検出します。FIX は displayLayer のみ対象（renderLayer は Render Setup と整合しないため手動削除）。", "has_fix": true,  "version": "1.1.0"},
   {"folder": "unusedShadingNode", "category": "シーン系",   "title": "Unused Shading Node",  "description": "shadingEngine に到達しない未使用シェーディングノード（マテリアル / テクスチャ / utility）を検出します。",         "has_fix": true,  "version": "1.0.0"},
   {"folder": "unknownNode",    "category": "シーン系",      "title": "Unknown Node / Plugin", "description": "unknown ノード（型: unknown / unknownDag / unknownTransform）と、シーンに残っている未ロードプラグイン参照を検出します。", "has_fix": true,  "version": "1.0.0"},
