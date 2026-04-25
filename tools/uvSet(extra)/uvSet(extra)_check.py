@@ -161,7 +161,7 @@ def get_results() -> list[dict]:
             elif _is_whitelisted_uvset(name):
                 details.append(f"{name} (whitelisted)")
             elif name in unconnected_extras:
-                details.append(f"{name} [未接続]")
+                details.append(f"⚠ {name} [未接続]")
             else:
                 details.append(f"{name} (extra, connected)")
         if not details:

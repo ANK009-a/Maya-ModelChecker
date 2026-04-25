@@ -19,7 +19,7 @@
   {"folder": "meshShapeName",  "category": "Mesh 属性系",   "title": "Mesh Shape Name",      "description": "transform 名と Shape 名が一致しない mesh を検出します。",                                                          "has_fix": true,  "version": "1.0.3"},
 
   {"folder": "uv(0.0-1.0)",   "category": "UV 系",         "title": "UV Range",             "description": "UV 座標が 0〜1 の範囲外にある mesh を検出します。PencilSelectedEdgeUVSet は対象外。",                            "has_fix": false, "version": "1.1.0"},
-  {"folder": "uvSet(extra)",   "category": "UV 系",         "title": "UV Set (Extra)",       "description": "map1 以外の余分な UV セットを持つ mesh を検出します。PencilSelectedEdgeUVSet が 3 個以上の場合も検出。",         "has_fix": false, "version": "1.1.0"},
+  {"folder": "uvSet(extra)",   "category": "UV 系",         "title": "UV Set (Extra)",       "description": "map1 以外の余分な UV セットを持つ mesh を検出します。PencilSelectedEdgeUVSet が 3 個以上の場合も検出。",         "has_fix": false, "version": "1.1.1"},
   {"folder": "uvSet(error)",   "category": "UV 系",         "title": "UV Set (Error)",       "description": "UV Set Editor に表示されないが UV データを保持している UVset を検出します。",                                      "has_fix": true,  "version": "1.0.3"},
 
   {"folder": "texturePath",    "category": "テクスチャ系",  "title": "Texture Path",         "description": "パス未設定またはファイルが存在しない file ノードを検出します。",                                                  "has_fix": false, "version": "1.1.2"},
