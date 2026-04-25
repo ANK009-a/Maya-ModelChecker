@@ -24,6 +24,7 @@ from _util import (
     parent_transform as _parent_transform,
     is_referenced as _is_referenced,
 )
+from _results import CheckResult, Severity
 
 try:
     import maya.api.OpenMaya as om2
@@ -160,11 +161,12 @@ def get_results():
                 f"out={info['out_count']}/{info['total']}"
             )
 
-        results.append({
-            "transform": parent,
-            "message": f"UV範囲外(0-1): {shape_short}（{len(bad_sets)} uvSets）",
-            "details": details,
-        })
+        results.append(CheckResult(
+            target=parent,
+            message=f"UV範囲外(0-1): {shape_short}（{len(bad_sets)} uvSets）",
+            details=details,
+            severity=Severity.WARNING,
+        ))
 
     return results
 
@@ -176,6 +178,6 @@ if __name__ == "__main__":
     else:
         print(f"[UVSpace 0-1] 範囲外UVを持つ mesh: {len(res)} 件")
         for r in res:
-            print(r["message"])
-            for line in r.get("details", []):
+            print(r.message)
+            for line in r.details:
                 print("  - " + line)

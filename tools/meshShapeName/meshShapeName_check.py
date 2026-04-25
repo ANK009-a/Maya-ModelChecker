@@ -17,6 +17,7 @@ from _util import (
     parent_transform as _parent_transform,
     is_referenced as _is_referenced,
 )
+from _results import CheckResult, Severity
 
 SUFFIX = "Shape"
 
@@ -37,15 +38,16 @@ def get_results():
         if shape_short == expected:
             continue
 
-        results.append({
-            "transform": parent,
-            "message": f"Shape名不一致: {parent_short} / {shape_short}（expected: {expected}）",
-            "details": [
+        results.append(CheckResult(
+            target=parent,
+            message=f"Shape名不一致: {parent_short} / {shape_short}（expected: {expected}）",
+            details=[
                 f"Transform: {parent}",
                 f"Shape: {shape}",
                 f"Expected(short): {expected}",
             ],
-        })
+            severity=Severity.ERROR,
+        ))
 
     return results
 
@@ -57,6 +59,6 @@ if __name__ == "__main__":
     else:
         print(f"[meshShapeName] 不一致 {len(res)} 件")
         for r in res:
-            print(r["message"])
-            for line in r.get("details", []):
+            print(r.message)
+            for line in r.details:
                 print("  - " + line)

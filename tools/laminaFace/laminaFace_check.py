@@ -4,6 +4,7 @@ from _util import (
     iter_scene_mesh_shapes as _iter_shapes,
     short_name as _short_name,
 )
+from _results import CheckResult, Severity
 
 
 def get_results():
@@ -19,11 +20,12 @@ def get_results():
             details = [f"ラミナフェース数: {len(lamina)} 件"]
             for line in lamina[:15]:
                 details.append(f"  {line.strip()}")
-            results.append({
-                "transform": parent,
-                "message": f"ラミナフェース ({len(lamina)} 面)",
-                "details": details,
-            })
+            results.append(CheckResult(
+                target=parent,
+                message=f"ラミナフェース ({len(lamina)} 面)",
+                details=details,
+                severity=Severity.ERROR,
+            ))
     return results
 
 
@@ -33,4 +35,4 @@ if __name__ == "__main__":
         print("[laminaFace] ラミナフェースは見つかりませんでした。")
     else:
         for r in res:
-            print(r["message"])
+            print(r.message)

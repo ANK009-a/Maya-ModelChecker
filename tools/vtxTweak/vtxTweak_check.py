@@ -25,6 +25,7 @@ from _util import (
     short_name as _short_name,
     parent_transform as _parent_transform,
 )
+from _results import CheckResult, Severity
 
 
 def _vec_is_nonzero(v):
@@ -178,11 +179,12 @@ def get_results():
         for i, v in samples:
             details.append(f"  - vtx[{i}] pnts=({v[0]:.6f}, {v[1]:.6f}, {v[2]:.6f})")
 
-        results.append({
-            "transform": parent,
-            "message": f"頂点移動履歴あり: {shape_short}（{count} vtx）",
-            "details": details,
-        })
+        results.append(CheckResult(
+            target=parent,
+            message=f"頂点移動履歴あり: {shape_short}（{count} vtx）",
+            details=details,
+            severity=Severity.ERROR,
+        ))
 
     return results
 
@@ -194,6 +196,6 @@ if __name__ == "__main__":
     else:
         print(f"[VTX] 頂点移動履歴あり: {len(res)} 件")
         for r in res:
-            print(r["message"])
-            for line in r.get("details", []):
+            print(r.message)
+            for line in r.details:
                 print("  - " + line)

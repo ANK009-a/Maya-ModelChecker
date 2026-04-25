@@ -19,6 +19,7 @@ import os
 import sys
 import ctypes
 import maya.cmds as cmds
+from _results import CheckResult, Severity
 
 
 # Windows GetDriveType 戻り値
@@ -72,11 +73,12 @@ def get_results():
     results = []
 
     if not _is_windows():
-        return [{
-            "transform": "(platform)",
-            "message": "Windows 以外の環境では判定できません",
-            "details": [f"sys.platform = {sys.platform}"],
-        }]
+        return [CheckResult(
+            target="(platform)",
+            message="Windows 以外の環境では判定できません",
+            details=[f"sys.platform = {sys.platform}"],
+            severity=Severity.INFO,
+        )]
 
     file_nodes = cmds.ls(type="file") or []
     for node in sorted(file_nodes):
@@ -112,11 +114,12 @@ def get_results():
         else:
             details.append(f"⚠ 共有不可種別: {label}")
 
-        results.append({
-            "transform": node,
-            "message": f"local texture: {node} ({label})",
-            "details": details,
-        })
+        results.append(CheckResult(
+            target=node,
+            message=f"local texture: {node} ({label})",
+            details=details,
+            severity=Severity.WARNING,
+        ))
 
     return results
 
@@ -128,4 +131,4 @@ if __name__ == "__main__":
     else:
         print(f"[localTexturePath] {len(res)} 件")
         for r in res:
-            print(r["message"])
+            print(r.message)

@@ -25,6 +25,7 @@ IGNORE_TYPES = frozenset([
 
 
 from _util import iter_scene_mesh_shapes as _iter_shapes
+from _results import CheckResult, Severity
 
 
 def get_results():
@@ -64,11 +65,12 @@ def get_results():
             for h in deformers[:5]:
                 details.append(f"  [{cmds.nodeType(h)}] {h}")
 
-        results.append({
-            "transform": parent,
-            "message": f"ヒストリー残留 (poly:{len(poly_ops)}, deformer:{len(deformers)})",
-            "details": details,
-        })
+        results.append(CheckResult(
+            target=parent,
+            message=f"ヒストリー残留 (poly:{len(poly_ops)}, deformer:{len(deformers)})",
+            details=details,
+            severity=Severity.ERROR,
+        ))
     return results
 
 
@@ -78,4 +80,4 @@ if __name__ == "__main__":
         print("[history] ヒストリーは見つかりませんでした。")
     else:
         for r in res:
-            print(r["message"])
+            print(r.message)

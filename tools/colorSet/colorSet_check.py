@@ -21,6 +21,7 @@ from _util import (
     short_name as _short_name,
     parent_transform as _parent_transform,
 )
+from _results import CheckResult, Severity
 
 
 def _get_color_sets(shape: str) -> list[str]:
@@ -32,8 +33,8 @@ def _get_color_sets(shape: str) -> list[str]:
     return [str(s) for s in sets_]
 
 
-def get_results() -> list[dict]:
-    results: list[dict] = []
+def get_results():
+    results = []
 
     shapes = _iter_shapes()
 
@@ -43,11 +44,12 @@ def get_results() -> list[dict]:
             continue
 
         parent = _parent_transform(shape)
-        results.append({
-            "transform": parent,
-            "message": f"カラーセット {len(color_sets)} 件",
-            "details": color_sets,
-        })
+        results.append(CheckResult(
+            target=parent,
+            message=f"カラーセット {len(color_sets)} 件",
+            details=color_sets,
+            severity=Severity.WARNING,
+        ))
 
     return results
 
@@ -60,5 +62,5 @@ if __name__ == "__main__":
     else:
         print(f"[ColorSet] カラーセットを持つ shape が {len(res)} 件見つかりました。")
         for r in res:
-            for line in r.get("details", []):
+            for line in r.details:
                 print(str(line))

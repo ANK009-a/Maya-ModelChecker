@@ -12,6 +12,7 @@ check処理:
 animCurve は別ツール `animCurve` として分割。
 """
 import maya.cmds as cmds
+from _results import CheckResult, Severity
 
 
 def _anim_layers():
@@ -26,11 +27,12 @@ def get_results():
         details = ["Type: animLayer"]
         if n == "BaseAnimation":
             details.append("⚠ BaseAnimation を削除すると配下の animLayer も全削除されます")
-        results.append({
-            "transform": n,
-            "message": f"animLayer: {n}",
-            "details": details,
-        })
+        results.append(CheckResult(
+            target=n,
+            message=f"animLayer: {n}",
+            details=details,
+            severity=Severity.WARNING,
+        ))
 
     return results
 
@@ -42,4 +44,4 @@ if __name__ == "__main__":
     else:
         print(f"[animLayer] {len(res)} 件")
         for r in res:
-            print(r["message"])
+            print(r.message)

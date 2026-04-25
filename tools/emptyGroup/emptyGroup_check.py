@@ -9,6 +9,7 @@ from _util import (
     short_name as _short_name,
     checker_selection as _checker_selection,
 )
+from _results import CheckResult, Severity
 
 DEFAULT_NODES = frozenset(["persp", "top", "front", "side", "left"])
 
@@ -45,11 +46,12 @@ def get_results():
                 f"⚠ 接続あり (in={len(incoming)}, out={len(outgoing)}) — 削除前に確認してください"
             )
 
-        results.append({
-            "transform": tr,
-            "message": "空グループ",
-            "details": details,
-        })
+        results.append(CheckResult(
+            target=tr,
+            message="空グループ",
+            details=details,
+            severity=Severity.ERROR,
+        ))
     return results
 
 
@@ -59,4 +61,4 @@ if __name__ == "__main__":
         print("[emptyGroup] 空グループは見つかりませんでした。")
     else:
         for r in res:
-            print(r["message"])
+            print(r.message)

@@ -10,6 +10,7 @@ pivot_check_allScene_shortName_nodup.py
 
 import maya.cmds as cmds
 from _util import iter_unique_mesh_parents as _iter_unique_mesh_parents
+from _results import CheckResult, Severity
 
 TOLERANCE = 1e-6  # 許容誤差（必要なら 1e-4 などに）
 
@@ -42,21 +43,23 @@ def get_results():
             if bad_sp:
                 msg_parts.append(f"ScalePivot: ({sp[0]:.6f}, {sp[1]:.6f}, {sp[2]:.6f})")
 
-            results.append({
-                "transform": tr,
-                "message": " / ".join(msg_parts),
+            results.append(CheckResult(
+                target=tr,
+                message=" / ".join(msg_parts),
                 # details は付けない（重複表示防止）
-            })
+                severity=Severity.WARNING,
+            ))
 
         except Exception as e:
-            results.append({
-                "transform": tr,
-                "message": f"Pivot取得エラー: {e}"
-            })
+            results.append(CheckResult(
+                target=tr,
+                message=f"Pivot取得エラー: {e}",
+                severity=Severity.ERROR,
+            ))
 
     return results
 
 
 if __name__ == "__main__":
     for item in get_results():
-        print(f'{item.get("transform")} : {item.get("message")}')
+        print(f'{item.target} : {item.message}')

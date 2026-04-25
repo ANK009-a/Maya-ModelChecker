@@ -18,6 +18,7 @@ from _util import (
     short_name as _leaf_name,
     checker_selection as _checker_selection,
 )
+from _results import CheckResult, Severity
 
 # 必要なら除外したい “標準” ノード（カメラ類）
 _DEFAULT_EXCLUDES = {
@@ -65,11 +66,12 @@ def get_results(exclude_defaults: bool = True):
                 t = "unknown"
             details.append(f"{p} ({t})")
 
-        results.append({
-            "transform": leaf,  # UI左の一覧で「衝突名」ごとにまとまる
-            "message": f"名称衝突: '{leaf}' が {len(items)} 個あります。",
-            "details": details,
-        })
+        results.append(CheckResult(
+            target=leaf,  # UI左の一覧で「衝突名」ごとにまとまる
+            message=f"名称衝突: '{leaf}' が {len(items)} 個あります。",
+            details=details,
+            severity=Severity.ERROR,
+        ))
 
     return results
 
@@ -82,6 +84,6 @@ if __name__ == "__main__":
     else:
         print(f"[NameCollision] 名称衝突が {len(res)} 件見つかりました。")
         for r in res:
-            print(r["message"])
-            for line in r.get("details", []):
+            print(r.message)
+            for line in r.details:
                 print("  - " + line)

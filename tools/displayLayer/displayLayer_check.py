@@ -10,6 +10,7 @@ defaultLayer / defaultRenderLayer 以外の displayLayer・renderLayer を検出
 - renderLayer:  defaultRenderLayer を除く（レガシー render layer）
 """
 import maya.cmds as cmds
+from _results import CheckResult, Severity
 
 
 _DEFAULT_DISPLAY = "defaultLayer"
@@ -42,11 +43,12 @@ def get_results():
                 details.append(f"  ... 他 {len(members) - 10} 件")
         if _is_locked(n):
             details.append("⚠ lockNode で保護されています（FIX 時に解除します）")
-        results.append({
-            "transform": n,
-            "message": f"displayLayer: {n}",
-            "details": details,
-        })
+        results.append(CheckResult(
+            target=n,
+            message=f"displayLayer: {n}",
+            details=details,
+            severity=Severity.WARNING,
+        ))
 
     for n in sorted(_layers("renderLayer", _DEFAULT_RENDER)):
         details = [
@@ -56,11 +58,12 @@ def get_results():
         ]
         if _is_locked(n):
             details.append("⚠ lockNode で保護されています")
-        results.append({
-            "transform": n,
-            "message": f"renderLayer: {n} (FIX 不可)",
-            "details": details,
-        })
+        results.append(CheckResult(
+            target=n,
+            message=f"renderLayer: {n} (FIX 不可)",
+            details=details,
+            severity=Severity.WARNING,
+        ))
 
     return results
 
@@ -72,4 +75,4 @@ if __name__ == "__main__":
     else:
         print(f"[displayLayer] {len(res)} 件")
         for r in res:
-            print(r["message"])
+            print(r.message)

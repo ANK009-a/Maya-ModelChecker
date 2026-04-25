@@ -9,6 +9,7 @@ from _util import (
     iter_scene_mesh_shapes as _iter_shapes,
     short_name as _short_name,
 )
+from _results import CheckResult, Severity
 
 TOL = 1e-6
 
@@ -34,20 +35,21 @@ def get_results():
 
         neg = [axis for axis, val in zip("XYZ", s) if val < -TOL]
         if neg:
-            results.append({
-                "transform": parent,
-                "message": (
+            results.append(CheckResult(
+                target=parent,
+                message=(
                     f"マイナススケール: {parent_short} "
                     f"({s[0]:.3f}, {s[1]:.3f}, {s[2]:.3f}) 軸:{', '.join(neg)}"
                 ),
-                "details": [
+                details=[
                     f"scaleX: {s[0]:.6f}",
                     f"scaleY: {s[1]:.6f}",
                     f"scaleZ: {s[2]:.6f}",
                     f"マイナス軸: {', '.join(neg)}",
                     "修正: fix ボタンで makeIdentity(scale) + 法線反転を実行",
                 ],
-            })
+                severity=Severity.ERROR,
+            ))
     return results
 
 
@@ -57,4 +59,4 @@ if __name__ == "__main__":
         print("[negativeScale] マイナススケールは見つかりませんでした。")
     else:
         for r in res:
-            print(r["message"])
+            print(r.message)

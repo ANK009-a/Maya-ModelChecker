@@ -8,6 +8,7 @@ UDIM / シーケンステクスチャ（<UDIM>, %04d 等）は存在チェック
 """
 import os
 import maya.cmds as cmds
+from _results import CheckResult, Severity
 
 
 def get_results():
@@ -18,11 +19,12 @@ def get_results():
         path = (cmds.getAttr(f"{fn}.fileTextureName") or "").strip()
 
         if not path:
-            results.append({
-                "transform": fn,
-                "message": f"パス未設定: {fn}",
-                "details": ["fileTextureName が空です"],
-            })
+            results.append(CheckResult(
+                target=fn,
+                message=f"パス未設定: {fn}",
+                details=["fileTextureName が空です"],
+                severity=Severity.ERROR,
+            ))
             continue
 
         issues = []
@@ -39,11 +41,12 @@ def get_results():
             details.append("(UDIM / シーケンステクスチャ: 実在チェックをスキップ)")
 
         if issues:
-            results.append({
-                "transform": fn,
-                "message": f"テクスチャ問題 ({', '.join(issues)}): {fn}",
-                "details": details,
-            })
+            results.append(CheckResult(
+                target=fn,
+                message=f"テクスチャ問題 ({', '.join(issues)}): {fn}",
+                details=details,
+                severity=Severity.ERROR,
+            ))
 
     return results
 
@@ -54,4 +57,4 @@ if __name__ == "__main__":
         print("[texturePath] テクスチャパスの問題は見つかりませんでした。")
     else:
         for r in res:
-            print(r["message"])
+            print(r.message)

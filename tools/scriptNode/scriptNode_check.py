@@ -14,6 +14,7 @@ scriptType:
   4=Internal / 5=Open / 6=Close / 7=Software
 """
 import maya.cmds as cmds
+from _results import CheckResult, Severity
 
 
 _SCRIPT_TYPE_LABELS = {
@@ -69,11 +70,12 @@ def get_results():
         if not before.strip() and not after.strip():
             details.append("  （スクリプト本体は空）")
 
-        results.append({
-            "transform": n,
-            "message": f"scriptNode: {n} [{label}]",
-            "details": details,
-        })
+        results.append(CheckResult(
+            target=n,
+            message=f"scriptNode: {n} [{label}]",
+            details=details,
+            severity=Severity.WARNING,
+        ))
 
     for n in sorted(cmds.ls(type="expression") or []):
         expr = _get_attr_safe(n, "expression")
@@ -82,11 +84,12 @@ def get_results():
             details.append(f"  expression: {_preview(expr)}")
         else:
             details.append("  （式は空）")
-        results.append({
-            "transform": n,
-            "message": f"expression: {n}",
-            "details": details,
-        })
+        results.append(CheckResult(
+            target=n,
+            message=f"expression: {n}",
+            details=details,
+            severity=Severity.WARNING,
+        ))
 
     return results
 
@@ -98,4 +101,4 @@ if __name__ == "__main__":
     else:
         print(f"[scriptNode] {len(res)} 件")
         for r in res:
-            print(r["message"])
+            print(r.message)

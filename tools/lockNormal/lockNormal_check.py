@@ -21,6 +21,7 @@ from _util import (
     short_name as _short_name,
     parent_transform as _shape_parent_transform,
 )
+from _results import CheckResult, Severity
 
 
 # ----------------------------
@@ -153,21 +154,23 @@ def get_results():
                     locked_infos.append(f"{sname} : locked({locked_count})")
 
         if locked_infos:
-            results.append({
-                "transform": tr,
-                "message": " / ".join(locked_infos)
-            })
+            results.append(CheckResult(
+                target=tr,
+                message=" / ".join(locked_infos),
+                severity=Severity.WARNING,
+            ))
         else:
             # すべて失敗した場合のみエラーとして返す（不要ならこのブロックを削除）
             if last_err and err_count == len(mesh_shapes):
-                results.append({
-                    "transform": tr,
-                    "message": f"法線ロック判定エラー: {last_err}"
-                })
+                results.append(CheckResult(
+                    target=tr,
+                    message=f"法線ロック判定エラー: {last_err}",
+                    severity=Severity.ERROR,
+                ))
 
     return results
 
 
 if __name__ == "__main__":
     for item in get_results():
-        print(f'{item.get("transform")} : {item.get("message")}')
+        print(f'{item.target} : {item.message}')

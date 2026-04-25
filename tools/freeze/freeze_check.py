@@ -16,6 +16,7 @@ freeze_check_allScene.py
 
 import maya.cmds as cmds
 from _util import iter_unique_mesh_parents as _iter_unique_mesh_parents
+from _results import CheckResult, Severity
 
 TOL = 1e-6  # 許容誤差（必要なら 1e-4 などに）
 
@@ -56,20 +57,22 @@ def get_results():
                 if bad_s:
                     parts.append(f"スケール: ({s[0]:.3f}, {s[1]:.3f}, {s[2]:.3f})")
 
-                results.append({
-                    "transform": tr,
-                    "message": " / ".join(parts)
-                })
+                results.append(CheckResult(
+                    target=tr,
+                    message=" / ".join(parts),
+                    severity=Severity.ERROR,
+                ))
 
         except Exception as e:
-            results.append({
-                "transform": tr,
-                "message": f"TRS取得エラー: {e}"
-            })
+            results.append(CheckResult(
+                target=tr,
+                message=f"TRS取得エラー: {e}",
+                severity=Severity.ERROR,
+            ))
 
     return results
 
 
 if __name__ == "__main__":
     for item in get_results():
-        print(f'{item.get("transform")} : {item.get("message")}')
+        print(f'{item.target} : {item.message}')

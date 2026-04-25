@@ -9,6 +9,7 @@ from _util import (
     iter_scene_mesh_shapes as _iter_shapes,
     short_name as _short_name,
 )
+from _results import CheckResult, Severity
 
 THRESHOLD = 0.0001   # 重複判定距離（ワールド単位）
 MAX_SHOW = 30
@@ -83,11 +84,12 @@ def get_results():
         for vi in overlapping[:MAX_SHOW]:
             details.append(f"  vtx[{vi}]")
 
-        results.append({
-            "transform": parent,
-            "message": f"重複頂点 ({len(overlapping)} 個)",
-            "details": details,
-        })
+        results.append(CheckResult(
+            target=parent,
+            message=f"重複頂点 ({len(overlapping)} 個)",
+            details=details,
+            severity=Severity.ERROR,
+        ))
     return results
 
 
@@ -97,4 +99,4 @@ if __name__ == "__main__":
         print("[overlappingVtx] 重複頂点は見つかりませんでした。")
     else:
         for r in res:
-            print(r["message"])
+            print(r.message)

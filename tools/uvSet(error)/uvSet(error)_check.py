@@ -29,6 +29,7 @@ from _util import (
     parent_transform as _parent_transform,
     is_referenced as _is_referenced,
 )
+from _results import CheckResult, Severity
 
 
 def _get_visible_uv_sets(shape: str):
@@ -130,11 +131,12 @@ def get_results():
             for i, n in unknown:
                 details.append(f"  - [{i}] {n}")
 
-        results.append({
-            "transform": parent,
-            "message": f"UVSet(非表示だがUV保持): {shape_short}（{len(hidden_with_uv)} sets）",
-            "details": details,
-        })
+        results.append(CheckResult(
+            target=parent,
+            message=f"UVSet(非表示だがUV保持): {shape_short}（{len(hidden_with_uv)} sets）",
+            details=details,
+            severity=Severity.ERROR,
+        ))
 
     return results
 
@@ -146,6 +148,6 @@ if __name__ == "__main__":
     else:
         print(f"[UVSet(Error)] 該当 {len(res)} 件")
         for r in res:
-            print(r["message"])
-            for line in r.get("details", []):
+            print(r.message)
+            for line in r.details:
                 print("  - " + line)

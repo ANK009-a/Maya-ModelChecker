@@ -19,6 +19,7 @@ from _util import (
     parent_transform as _parent_transform,
     is_referenced as _is_referenced,
 )
+from _results import CheckResult, Severity
 
 try:
     import maya.api.OpenMaya as om2
@@ -71,11 +72,12 @@ def get_results():
         if len(isolated) > MAX_SHOW:
             details.append(f"  ... (+{len(isolated) - MAX_SHOW})")
 
-        results.append({
-            "transform": parent,
-            "message": f"孤立頂点あり: {shape_short}（{len(isolated)} vtx）",
-            "details": details,
-        })
+        results.append(CheckResult(
+            target=parent,
+            message=f"孤立頂点あり: {shape_short}（{len(isolated)} vtx）",
+            details=details,
+            severity=Severity.ERROR,
+        ))
 
     return results
 
@@ -87,6 +89,6 @@ if __name__ == "__main__":
     else:
         print(f"[isolateVtx] 孤立頂点あり: {len(res)} 件")
         for r in res:
-            print(r["message"])
-            for line in r.get("details", []):
+            print(r.message)
+            for line in r.details:
                 print("  - " + line)

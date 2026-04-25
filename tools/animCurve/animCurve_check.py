@@ -14,6 +14,7 @@ animLayer は別ツール `animLayer` として分割。
 """
 import maya.cmds as cmds
 from _util import checker_selection as _checker_selection
+from _results import CheckResult, Severity
 
 
 _ANIM_TYPES = [
@@ -53,13 +54,14 @@ def get_results():
     anim_curves.sort(key=lambda x: (x[1], x[0]))
 
     for n, t in anim_curves:
-        results.append({
-            "transform": n,
-            "message": f"animCurve: {n} ({t})",
-            "details": [
+        results.append(CheckResult(
+            target=n,
+            message=f"animCurve: {n} ({t})",
+            details=[
                 f"Type: {t}",
             ],
-        })
+            severity=Severity.WARNING,
+        ))
 
     return results
 
@@ -71,4 +73,4 @@ if __name__ == "__main__":
     else:
         print(f"[animCurve] {len(res)} 件")
         for r in res:
-            print(r["message"])
+            print(r.message)

@@ -15,6 +15,7 @@ unknown ノードはロックされている場合がある。FIX 時に lockNod
 全プラグイン参照を一括で削除する。
 """
 import maya.cmds as cmds
+from _results import CheckResult, Severity
 
 
 _UNKNOWN_TYPES = ["unknown", "unknownDag", "unknownTransform"]
@@ -40,23 +41,25 @@ def get_results():
         details = [f"Type: {t}"]
         if _is_locked(n):
             details.append("⚠ lockNode で保護されています（FIX 時に解除します）")
-        results.append({
-            "transform": n,
-            "message": f"unknown node: {n} ({t})",
-            "details": details,
-        })
+        results.append(CheckResult(
+            target=n,
+            message=f"unknown node: {n} ({t})",
+            details=details,
+            severity=Severity.ERROR,
+        ))
 
     plugins = cmds.unknownPlugin(query=True, list=True) or []
     for p in sorted(plugins):
-        results.append({
-            "transform": p,
-            "message": f"unknown plugin: {p}",
-            "details": [
+        results.append(CheckResult(
+            target=p,
+            message=f"unknown plugin: {p}",
+            details=[
                 "Type: unknown plugin reference",
                 "※ Maya ノードではないため Maya 上では選択されません",
                 "※ FIX で参照を一括削除します",
             ],
-        })
+            severity=Severity.ERROR,
+        ))
 
     return results
 
@@ -68,4 +71,4 @@ if __name__ == "__main__":
     else:
         print(f"[unknownNode] {len(res)} 件")
         for r in res:
-            print(r["message"])
+            print(r.message)

@@ -14,6 +14,7 @@ from _util import (
     iter_scene_mesh_shapes as _iter_shapes,
     short_name as _short_name,
 )
+from _results import CheckResult, Severity
 
 MAX_FACES_PER_MESH = 50000  # これ以上の面数はスキップ
 MAX_SHOW = 20
@@ -110,11 +111,12 @@ def get_results():
 
         n_faces = cmds.polyEvaluate(shape, f=True) or 0
         if n_faces > MAX_FACES_PER_MESH:
-            results.append({
-                "transform": parent,
-                "message": f"スキップ（フェース数 {n_faces} > {MAX_FACES_PER_MESH}）",
-                "details": ["フェース数が多すぎます。Maya の Mesh > Cleanup を使用してください。"],
-            })
+            results.append(CheckResult(
+                target=parent,
+                message=f"スキップ（フェース数 {n_faces} > {MAX_FACES_PER_MESH}）",
+                details=["フェース数が多すぎます。Maya の Mesh > Cleanup を使用してください。"],
+                severity=Severity.WARNING,
+            ))
             continue
 
         reversed_faces = _find_reversed_faces(shape)
@@ -128,11 +130,12 @@ def get_results():
         for fi in reversed_faces[:MAX_SHOW]:
             details.append(f"  f[{fi}]")
 
-        results.append({
-            "transform": parent,
-            "message": f"法線反転フェース ({len(reversed_faces)} 面)",
-            "details": details,
-        })
+        results.append(CheckResult(
+            target=parent,
+            message=f"法線反転フェース ({len(reversed_faces)} 面)",
+            details=details,
+            severity=Severity.ERROR,
+        ))
     return results
 
 
@@ -142,4 +145,4 @@ if __name__ == "__main__":
         print("[reversedNormal] 反転フェースは見つかりませんでした。")
     else:
         for r in res:
-            print(r["message"])
+            print(r.message)

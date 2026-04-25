@@ -4,6 +4,7 @@ from _util import (
     iter_scene_mesh_shapes as _iter_shapes,
     short_name as _short_name,
 )
+from _results import CheckResult, Severity
 
 
 def get_results():
@@ -27,11 +28,12 @@ def get_results():
                 details.append(f"非マニフォールド頂点: {len(nm_verts)} 件")
                 for line in nm_verts[:10]:
                     details.append(f"  {line.strip()}")
-            results.append({
-                "transform": parent,
-                "message": f"非マニフォールド検出 (edge:{len(nm_edges)}, vtx:{len(nm_verts)})",
-                "details": details,
-            })
+            results.append(CheckResult(
+                target=parent,
+                message=f"非マニフォールド検出 (edge:{len(nm_edges)}, vtx:{len(nm_verts)})",
+                details=details,
+                severity=Severity.ERROR,
+            ))
     return results
 
 
@@ -41,4 +43,4 @@ if __name__ == "__main__":
         print("[nonManifold] 非マニフォールドジオメトリは見つかりませんでした。")
     else:
         for r in res:
-            print(r["message"])
+            print(r.message)

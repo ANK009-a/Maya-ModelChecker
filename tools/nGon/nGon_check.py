@@ -12,6 +12,7 @@ FIX は付けない（修正は手動でのクワッド化を推奨）。
 """
 import maya.cmds as cmds
 from _util import iter_unique_mesh_parents
+from _results import CheckResult, Severity
 
 
 _FACE_TYPE_BIT = 0x0008
@@ -92,11 +93,12 @@ def get_results():
             if len(collected) > preview_n:
                 details.append(f"  ... 他 {len(collected) - preview_n} 件")
 
-            results.append({
-                "transform": tr,
-                "message": f"n-gon: {len(collected)} 件",
-                "details": details,
-            })
+            results.append(CheckResult(
+                target=tr,
+                message=f"n-gon: {len(collected)} 件",
+                details=details,
+                severity=Severity.WARNING,
+            ))
     finally:
         try:
             cmds.polySelectConstraint(disable=True)
@@ -120,4 +122,4 @@ if __name__ == "__main__":
     else:
         print(f"[nGon] {len(res)} mesh")
         for r in res:
-            print(r["message"])
+            print(r.message)

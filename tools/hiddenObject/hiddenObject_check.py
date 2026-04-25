@@ -6,6 +6,7 @@ visibility=False になっている mesh の親 transform を検出する。
 """
 import maya.cmds as cmds
 from _util import iter_scene_mesh_shapes as _iter_shapes
+from _results import CheckResult, Severity
 
 
 def _is_hidden(transform):
@@ -41,14 +42,15 @@ def get_results():
                 vis = cmds.getAttr(f"{parent}.visibility")
             except Exception:
                 vis = "不明"
-            results.append({
-                "transform": parent,
-                "message": "非表示オブジェクト",
-                "details": [
+            results.append(CheckResult(
+                target=parent,
+                message="非表示オブジェクト",
+                details=[
                     f"visibility: {vis}",
                     "fix で表示状態に戻す（削除はユーザーが判断してください）",
                 ],
-            })
+                severity=Severity.WARNING,
+            ))
     return results
 
 
@@ -58,4 +60,4 @@ if __name__ == "__main__":
         print("[hiddenObject] 非表示メッシュは見つかりませんでした。")
     else:
         for r in res:
-            print(r["message"])
+            print(r.message)

@@ -26,6 +26,7 @@ from _util import (
     short_name as _short_name,
     parent_transform as _parent_transform,
 )
+from _results import CheckResult, Severity
 
 REQUIRED_UVSET = "map1"
 
@@ -105,8 +106,8 @@ def _uvset_has_downstream_connection(shape: str, uv_set_name: str) -> bool:
 # ----------------------------------------------------------------------
 # Public API (assetChecker calls this)
 # ----------------------------------------------------------------------
-def get_results() -> list[dict]:
-    results: list[dict] = []
+def get_results():
+    results = []
 
     for shape in _iter_scene_mesh_shapes():
         uv_sets = _get_uv_sets(shape)
@@ -167,11 +168,12 @@ def get_results() -> list[dict]:
         if not details:
             details = ["(none)"]
 
-        results.append({
-            "transform": _parent_transform(shape),
-            "message": f"UVSet({', '.join(issues)})",
-            "details": details,
-        })
+        results.append(CheckResult(
+            target=_parent_transform(shape),
+            message=f"UVSet({', '.join(issues)})",
+            details=details,
+            severity=Severity.WARNING,
+        ))
 
     return results
 
@@ -186,5 +188,5 @@ if __name__ == "__main__":
     else:
         print(f"[UVSet] NG: {len(res)} mesh(es) have UV set issues.")
         for r in res:
-            for line in r.get("details", []):
+            for line in r.details:
                 print(line)
