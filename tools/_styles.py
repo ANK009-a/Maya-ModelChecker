@@ -9,7 +9,8 @@ assetChecker.py から bootstrap でロードされ、`import _styles` で参照
 # ============================================================
 S_UNCHECKED = 0
 S_OK        = 1
-S_ERROR     = 2
+S_WARNING   = 2
+S_ERROR     = 3
 
 
 # ============================================================
@@ -93,6 +94,17 @@ QPushButton {
 }
 QPushButton:hover { background-color: #240e0e; }
 QPushButton:disabled { background-color: #170808; }
+"""
+
+SS_BTN_WARNING = """
+QPushButton {
+    background-color: #2a2210;
+    border: 1px solid #4a3818;
+    border-radius: 6px;
+    text-align: left;
+}
+QPushButton:hover { background-color: #2e2614; }
+QPushButton:disabled { background-color: #1c1808; }
 """
 
 

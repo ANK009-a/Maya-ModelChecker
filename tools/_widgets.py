@@ -366,13 +366,22 @@ class CategoryHeader(QtWidgets.QWidget):
     def isCollapsed(self):
         return self._collapsed
 
-    def setStatus(self, err_tool_count, all_ok):
-        """err_tool_count: エラー状態のツール数（件数ではなくツール数）
-        all_ok: カテゴリ内の全ツールが OK 状態なら True → ✓ 表示"""
+    def setStatus(self, err_tool_count, all_ok, warn_tool_count=0):
+        """err_tool_count : エラー状態のツール数（最優先で赤バッジ表示）
+        warn_tool_count   : 警告状態のツール数（エラーが無いとき黄バッジ表示）
+        all_ok            : カテゴリ内の全ツールが OK 状態なら True → ✓ 表示
+        """
         if err_tool_count > 0:
             self._badge_lbl.setText(str(err_tool_count))
             self._badge_lbl.setStyleSheet(
                 "background: #3a1010; color: #e05858; border-radius: 3px;"
+                " padding: 1px 6px; font-size: 10px;"
+            )
+            self._badge_lbl.setVisible(True)
+        elif warn_tool_count > 0:
+            self._badge_lbl.setText(str(warn_tool_count))
+            self._badge_lbl.setStyleSheet(
+                "background: #4a3818; color: #e0b060; border-radius: 3px;"
                 " padding: 1px 6px; font-size: 10px;"
             )
             self._badge_lbl.setVisible(True)

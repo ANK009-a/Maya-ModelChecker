@@ -18,14 +18,14 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.5.0"
+LAUNCHER_VERSION    = "1.6.0"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
 FIX_W        = 38   # FIX ボタンの幅
 
 # bootstrap でリモートロードするヘルパーモジュール
-_BOOTSTRAP_MODULES = ("_styles", "_widgets", "_loader", "_formatter")
+_BOOTSTRAP_MODULES = ("_styles", "_widgets", "_loader", "_formatter", "_results")
 
 
 # ============================================================
@@ -90,6 +90,7 @@ import _styles
 import _widgets
 import _loader
 import _formatter
+import _results  # noqa: F401  ← check スクリプトが `from _results import CheckResult` で参照
 
 _loader.configure(GITHUB_RAW)
 
@@ -309,12 +310,14 @@ class assetChecker(QtWidgets.QDialog):
 
         _lbl_ss = "font-size: 11px; background: transparent;"
         self._lbl_error     = QtWidgets.QLabel("✗  0件エラー")
+        self._lbl_warning   = QtWidgets.QLabel("⚠  0件警告")
         self._lbl_ok        = QtWidgets.QLabel("✓  0件 OK")
         self._lbl_unchecked = QtWidgets.QLabel("○  0件 未チェック")
         self._lbl_error.setStyleSheet(f"color: #e05858; {_lbl_ss}")
+        self._lbl_warning.setStyleSheet(f"color: #e0b060; {_lbl_ss}")
         self._lbl_ok.setStyleSheet(f"color: #28c880; {_lbl_ss}")
         self._lbl_unchecked.setStyleSheet(f"color: #4878a0; {_lbl_ss}")
-        for lbl in (self._lbl_error, self._lbl_ok, self._lbl_unchecked):
+        for lbl in (self._lbl_error, self._lbl_warning, self._lbl_ok, self._lbl_unchecked):
             lbl.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft)
             status_lay.addWidget(lbl)
         status_lay.addStretch()
@@ -424,11 +427,14 @@ class assetChecker(QtWidgets.QDialog):
         err_tool_count = sum(
             1 for f in folders if self._folder_states.get(f) == _styles.S_ERROR
         )
+        warn_tool_count = sum(
+            1 for f in folders if self._folder_states.get(f) == _styles.S_WARNING
+        )
         all_ok = (
             len(folders) > 0
             and all(self._folder_states.get(f) == _styles.S_OK for f in folders)
         )
-        info["header"].setStatus(err_tool_count, all_ok)
+        info["header"].setStatus(err_tool_count, all_ok, warn_tool_count)
 
     # ----------------------------------------------------------
     # ボタン状態更新
@@ -448,12 +454,18 @@ class assetChecker(QtWidgets.QDialog):
         elif state == _styles.S_OK:
             btn.setStyleSheet(_styles.SS_BTN_OK)
             btn.setName(f"✓  {title}", "#28c880")
+        elif state == _styles.S_WARNING:
+            btn.setStyleSheet(_styles.SS_BTN_WARNING)
+            btn.setName(f"⚠  {title}", "#e0b060")
         else:
             btn.setStyleSheet(_styles.SS_BTN_ERROR)
             btn.setName(f"✗  {title}", "#e05858")
 
         if fix:
-            show = state == _styles.S_ERROR and self.has_fix_script.get(folder, False)
+            show = (
+                state in (_styles.S_ERROR, _styles.S_WARNING)
+                and self.has_fix_script.get(folder, False)
+            )
             fix.setVisible(show)
             fix.setEnabled(show)
 
@@ -462,11 +474,14 @@ class assetChecker(QtWidgets.QDialog):
             self._update_category_badge(cat)
 
     def _update_status_bar(self):
-        n_err = sum(1 for s in self._folder_states.values() if s == _styles.S_ERROR)
-        n_ok  = sum(1 for s in self._folder_states.values() if s == _styles.S_OK)
-        n_unc = sum(1 for s in self._folder_states.values() if s == _styles.S_UNCHECKED)
+        n_err  = sum(1 for s in self._folder_states.values() if s == _styles.S_ERROR)
+        n_warn = sum(1 for s in self._folder_states.values() if s == _styles.S_WARNING)
+        n_ok   = sum(1 for s in self._folder_states.values() if s == _styles.S_OK)
+        n_unc  = sum(1 for s in self._folder_states.values() if s == _styles.S_UNCHECKED)
 
         self._lbl_error.setText(f"✗  {n_err}件エラー")
+        if hasattr(self, "_lbl_warning"):
+            self._lbl_warning.setText(f"⚠  {n_warn}件警告")
         self._lbl_ok.setText(f"✓  {n_ok}件 OK")
         self._lbl_unchecked.setText(f"○  {n_unc}件 未チェック")
 
@@ -590,13 +605,14 @@ class assetChecker(QtWidgets.QDialog):
         structured, text = _loader.load_and_run(folder, f"{folder}_check.py", selection=selection)
 
         if structured is not None:
-            obj_to_details = _formatter.normalize_structured(structured)
+            obj_to_details, severities = _formatter.normalize_structured(structured)
             has_issue = bool(obj_to_details)
             count = len(obj_to_details)
         else:
             has_issue = bool(text.strip())
             count = 1 if has_issue else 0
             obj_to_details = {"stdout": [text]} if has_issue else {}
+            severities = {}
 
         # FIX 前の自動選択に使うため常にキャッシュ
         self._last_check_results[folder] = obj_to_details
@@ -605,7 +621,19 @@ class assetChecker(QtWidgets.QDialog):
             self._set_object_list_title(self._folder_titles.get(folder, folder))
             self.set_object_results(obj_to_details)
 
-        self._set_folder_state(folder, _styles.S_ERROR if has_issue else _styles.S_OK, count)
+        # 結果の severity からツール状態を決定
+        if has_issue:
+            sev_set = set(severities.values())
+            if "error" in sev_set:
+                state = _styles.S_ERROR
+            elif "warning" in sev_set:
+                state = _styles.S_WARNING
+            else:
+                # severity 未指定 / info のみ → 既定でエラー扱い（旧形式と同じ）
+                state = _styles.S_ERROR
+        else:
+            state = _styles.S_OK
+        self._set_folder_state(folder, state, count)
         self._update_status_bar()
         return has_issue
 
@@ -641,7 +669,8 @@ class assetChecker(QtWidgets.QDialog):
         self._set_object_list_title(self._folder_titles.get(folder, folder))
         structured, text = _loader.load_and_run(folder, f"{folder}_fix.py", selection=[])
         if structured is not None:
-            self.set_object_results(_formatter.normalize_structured(structured))
+            obj_to_details, _sev = _formatter.normalize_structured(structured)
+            self.set_object_results(obj_to_details)
         else:
             self.set_object_results({"stdout": [text]} if text.strip() else {})
         # fix 後に自動 re-check
@@ -735,7 +764,7 @@ class assetChecker(QtWidgets.QDialog):
                 fix_btn.setEnabled(False)
             else:
                 show = (
-                    self._folder_states.get(f) == _styles.S_ERROR
+                    self._folder_states.get(f) in (_styles.S_ERROR, _styles.S_WARNING)
                     and self.has_fix_script.get(f, False)
                 )
                 fix_btn.setVisible(show)

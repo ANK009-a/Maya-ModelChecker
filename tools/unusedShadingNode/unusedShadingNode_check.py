@@ -13,8 +13,13 @@ shadingEngine に到達しないシェーディング関連ノード（マテリ
 
 リファレンス由来のノードと、Maya がシーン作成時に生成する既定ノード
 （lambert1 / particleCloud1 / shaderGlow1）は除外。
+
+severity: WARNING
+  → 検出されても削除推奨だが、テンプレート用 / 後で接続予定 / リギング都合で
+    意図的に残しているケースもあるため、誤検知を考慮して警告扱いとする。
 """
 import maya.cmds as cmds
+from _results import CheckResult, Severity
 
 
 _DEFAULT_NAMES = {"lambert1", "particleCloud1", "shaderGlow1"}
@@ -72,14 +77,15 @@ def get_results():
             t = cmds.nodeType(n)
         except Exception:
             continue
-        results.append({
-            "transform": n,
-            "message": f"unused: {n} ({t})",
-            "details": [
+        results.append(CheckResult(
+            target=n,
+            message=f"unused: {n} ({t})",
+            details=[
                 f"Type: {t}",
                 "shadingEngine への接続なし",
             ],
-        })
+            severity=Severity.WARNING,
+        ))
     return results
 
 
@@ -90,4 +96,4 @@ if __name__ == "__main__":
     else:
         print(f"[unusedShadingNode] {len(res)} 件")
         for r in res:
-            print(r["message"])
+            print(r.message)
