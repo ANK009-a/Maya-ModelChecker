@@ -645,7 +645,30 @@ QFrame#statusBar {
         left_lay.setContentsMargins(0, 0, 0, 0)
         left_lay.setSpacing(0)
 
-        # 左パネル: ツール一覧（スクロール）
+        # 左パネル上部: CHECK / ALL CHECK ボタン
+        top_btn_w = QtWidgets.QWidget()
+        top_btn_w.setStyleSheet("background: transparent;")
+        top_btn_lay = QtWidgets.QHBoxLayout(top_btn_w)
+        top_btn_lay.setContentsMargins(7, 7, 7, 0)
+        top_btn_lay.setSpacing(6)
+
+        self.check_btn = QtWidgets.QPushButton("CHECK")
+        self.check_btn.setFixedHeight(BTN_H)
+        self.check_btn.setStyleSheet(self._SS_BTN_CHECK)
+        self.check_btn.clicked.connect(self.start_check)
+        self.check_btn.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+
+        self.all_check_btn = QtWidgets.QPushButton("ALL CHECK")
+        self.all_check_btn.setFixedHeight(BTN_H)
+        self.all_check_btn.setStyleSheet(self._SS_BTN_ALL)
+        self.all_check_btn.clicked.connect(self.start_all_check)
+        self.all_check_btn.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+
+        top_btn_lay.addWidget(self.check_btn)
+        top_btn_lay.addWidget(self.all_check_btn)
+        left_lay.addWidget(top_btn_w)
+
+        # 左パネル下部: ツール一覧（スクロール）
         scroll = QtWidgets.QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
@@ -675,36 +698,12 @@ QFrame#statusBar {
         right_lay.setContentsMargins(0, 0, 0, 0)
         right_lay.setSpacing(8)
 
-        # オブジェクトリスト + 上部の CHECK/ALL CHECK ボタン + ツール名ラベルを縦レイアウトでラップ
+        # オブジェクトリスト + 上部のツール名ラベルを縦レイアウトでラップ
         list_container = QtWidgets.QWidget()
         list_container.setStyleSheet("background: transparent;")
         list_lay = QtWidgets.QVBoxLayout(list_container)
         list_lay.setContentsMargins(0, 0, 0, 0)
         list_lay.setSpacing(4)
-
-        # CHECK / ALL CHECK ボタン行（オブジェクトリストの上部）
-        top_btn_w = QtWidgets.QWidget()
-        top_btn_w.setStyleSheet("background: transparent;")
-        top_btn_lay = QtWidgets.QHBoxLayout(top_btn_w)
-        top_btn_lay.setContentsMargins(0, 0, 0, 0)
-        top_btn_lay.setSpacing(6)
-
-        self.check_btn = QtWidgets.QPushButton("CHECK")
-        self.check_btn.setFixedHeight(BTN_H)
-        self.check_btn.setStyleSheet(self._SS_BTN_CHECK)
-        self.check_btn.clicked.connect(self.start_check)
-        self.check_btn.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
-        self.check_btn.setMinimumWidth(1)
-
-        self.all_check_btn = QtWidgets.QPushButton("ALL CHECK")
-        self.all_check_btn.setFixedHeight(BTN_H)
-        self.all_check_btn.setStyleSheet(self._SS_BTN_ALL)
-        self.all_check_btn.clicked.connect(self.start_all_check)
-        self.all_check_btn.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
-        self.all_check_btn.setMinimumWidth(1)
-
-        top_btn_lay.addWidget(self.check_btn)
-        top_btn_lay.addWidget(self.all_check_btn)
 
         self.object_list_title = QtWidgets.QLabel("ツール名")
         self.object_list_title.setStyleSheet(self._SS_OBJECT_LIST_TITLE)
@@ -714,7 +713,6 @@ QFrame#statusBar {
         self.object_list.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.object_list.setStyleSheet(self._SS_OBJECT_LIST)
 
-        list_lay.addWidget(top_btn_w)
         list_lay.addWidget(self.object_list_title)
         list_lay.addWidget(self.object_list, 1)
 
