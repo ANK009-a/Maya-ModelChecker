@@ -49,12 +49,16 @@ def get_results():
         })
 
     for n in sorted(_layers("renderLayer", _DEFAULT_RENDER)):
-        details = ["Type: renderLayer (legacy)"]
+        details = [
+            "Type: renderLayer (legacy)",
+            "⚠ FIX 対象外（Render Setup と整合しないため手動削除推奨）",
+            "  Maya の Render Setup ウィンドウから削除してください",
+        ]
         if _is_locked(n):
-            details.append("⚠ lockNode で保護されています（FIX 時に解除します）")
+            details.append("⚠ lockNode で保護されています")
         results.append({
             "transform": n,
-            "message": f"renderLayer: {n}",
+            "message": f"renderLayer: {n} (FIX 不可)",
             "details": details,
         })
 
