@@ -31,9 +31,10 @@ def maya_main_window():
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 GITHUB_API_INDEX    = f"{GITHUB_RAW}/tools/manifest_index.json"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.3.6"
+LAUNCHER_VERSION    = "1.3.7"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
-BTN_H        = 28   # ツールボタン / トップバーボタンの高さ
+BTN_H        = 28   # ツールボタンの高さ
+TOP_BAR_H    = 20   # 枠外トップバーの高さ（CHECK/ALL CHECK ボタン と object_list_title）
 FIX_W        = 38   # FIX ボタンの幅
 
 _script_cache = {}  # { "folder/script.py": "コード文字列" }
@@ -653,15 +654,16 @@ QFrame#statusBar {
         top_btn_lay.setContentsMargins(0, 0, 0, 0)
         top_btn_lay.setSpacing(6)
 
+        # ボタンの縦幅は object_list_title と同じ高さに合わせる
         self.check_btn = QtWidgets.QPushButton("CHECK")
-        self.check_btn.setFixedHeight(BTN_H)
+        self.check_btn.setFixedHeight(TOP_BAR_H)
         self.check_btn.setStyleSheet(self._SS_BTN_CHECK)
         self.check_btn.clicked.connect(self.start_check)
         self.check_btn.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
         self.check_btn.setMinimumWidth(1)
 
         self.all_check_btn = QtWidgets.QPushButton("ALL CHECK")
-        self.all_check_btn.setFixedHeight(BTN_H)
+        self.all_check_btn.setFixedHeight(TOP_BAR_H)
         self.all_check_btn.setStyleSheet(self._SS_BTN_ALL)
         self.all_check_btn.clicked.connect(self.start_all_check)
         self.all_check_btn.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
@@ -719,6 +721,7 @@ QFrame#statusBar {
 
         self.object_list_title = QtWidgets.QLabel("ツール名")
         self.object_list_title.setStyleSheet(self._SS_OBJECT_LIST_TITLE)
+        self.object_list_title.setFixedHeight(TOP_BAR_H)
 
         self.object_list = QtWidgets.QListWidget()
         self.object_list.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)

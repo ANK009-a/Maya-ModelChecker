@@ -127,7 +127,8 @@ def get_results():
 | 定数 | 値 | 説明 |
 |------|-----|------|
 | `LEFT_PANEL_W` | 204 | 左カラム全体の幅 px（CHECK/ALL CHECK ボタンと左パネル本体を内包） |
-| `BTN_H`        | 28  | ツールボタン / CHECK・ALL CHECK ボタンの高さ px |
+| `BTN_H`        | 28  | ツールボタンの高さ px |
+| `TOP_BAR_H`    | 20  | 枠外トップバーの高さ px（CHECK/ALL CHECK と object_list_title） |
 | `FIX_W`        | 38  | FIX ボタンの幅 px |
 
 ## ランチャーバージョン
@@ -159,9 +160,9 @@ self.resize(600, 700)  # __init__ 内
 QDialog (bg #060c18)
 └── body (margin 10, spacing 10)
     ├── left_container QVBoxLayout (transparent, fixedW 204, spacing 4)
-    │   ├── 上部ボタン行 QHBoxLayout (spacing 6) ← 枠外
-    │   │   ├── CHECK (BTN_H=28, Expanding)
-    │   │   └── ALL CHECK (BTN_H=28, Expanding)
+    │   ├── 上部ボタン行 QHBoxLayout (spacing 6) ← 枠外、高さ TOP_BAR_H=20
+    │   │   ├── CHECK (TOP_BAR_H=20, Expanding)
+    │   │   └── ALL CHECK (TOP_BAR_H=20, Expanding)
     │   └── 左パネル QFrame#leftPanel (rounded 8px, bg #0b1628, border #1a2e4a)
     │       └── ツール一覧 QScrollArea (transparent, no border)
     │           └── rows_layout QVBoxLayout (margin 7, spacing 3)
@@ -172,7 +173,7 @@ QDialog (bg #060c18)
     │               └── stretch
     └── 右パネル QHBoxLayout (spacing 8)
         ├── list_container QVBoxLayout (spacing 4) - stretch 37
-        │   ├── object_list_title QLabel (現在のツール名表示) ← 枠外
+        │   ├── object_list_title QLabel (現在のツール名表示) ← 枠外、高さ TOP_BAR_H=20
         │   └── object_list (rounded 8px) - stretch 1
         └── detail_view  (rounded 8px) - stretch 63
 └── ステータスバー QFrame#statusBar (h 30, bg #0b1628, top border)
