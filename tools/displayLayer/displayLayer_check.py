@@ -47,7 +47,7 @@ def get_results():
             target=n,
             message=f"displayLayer: {n}",
             details=details,
-            severity=Severity.WARNING,
+            severity=Severity.ERROR,
         ))
 
     for n in sorted(_layers("renderLayer", _DEFAULT_RENDER)):
@@ -62,7 +62,7 @@ def get_results():
             target=n,
             message=f"renderLayer: {n} (FIX 不可)",
             details=details,
-            severity=Severity.WARNING,
+            severity=Severity.ERROR,
         ))
 
     return results

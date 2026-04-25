@@ -47,7 +47,7 @@ def get_results():
                 target=tr,
                 message=" / ".join(msg_parts),
                 # details は付けない（重複表示防止）
-                severity=Severity.WARNING,
+                severity=Severity.ERROR,
             ))
 
         except Exception as e:

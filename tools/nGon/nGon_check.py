@@ -97,7 +97,7 @@ def get_results():
                 target=tr,
                 message=f"n-gon: {len(collected)} 件",
                 details=details,
-                severity=Severity.WARNING,
+                severity=Severity.ERROR,
             ))
     finally:
         try:

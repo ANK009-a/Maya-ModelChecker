@@ -13,15 +13,16 @@ check / fix の戻り値型（v1.6.0〜）。
                 details=["Tweaked vertex count: 5"],
                 severity=Severity.ERROR,
             ),
-            CheckResult(
-                target="lambert2",
-                message="未使用の可能性あり（プレースホルダの可能性も）",
-                severity=Severity.WARNING,
-            ),
         ]
 
 旧 API（list[dict] / dict[str, list[str]]）も継続サポート。
 旧形式は severity が指定されていない場合 "error" として扱われる。
+
+Severity:
+- ERROR を既定値として使う。
+- WARNING / INFO 定数は API として残してあるが、launcher 側では区別しない（v1.7.0 で UI 撤廃）。
+  すべての結果が ERROR と同じ赤系で表示される。将来 WARNING UI を再導入する場合は
+  _styles / _widgets / assetChecker._set_folder_state を再拡張する必要がある。
 """
 
 from dataclasses import dataclass, field

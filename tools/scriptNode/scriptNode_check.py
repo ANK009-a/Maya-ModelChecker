@@ -74,7 +74,7 @@ def get_results():
             target=n,
             message=f"scriptNode: {n} [{label}]",
             details=details,
-            severity=Severity.WARNING,
+            severity=Severity.ERROR,
         ))
 
     for n in sorted(cmds.ls(type="expression") or []):
@@ -88,7 +88,7 @@ def get_results():
             target=n,
             message=f"expression: {n}",
             details=details,
-            severity=Severity.WARNING,
+            severity=Severity.ERROR,
         ))
 
     return results

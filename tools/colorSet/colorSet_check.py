@@ -48,7 +48,7 @@ def get_results():
             target=parent,
             message=f"カラーセット {len(color_sets)} 件",
             details=color_sets,
-            severity=Severity.WARNING,
+            severity=Severity.ERROR,
         ))
 
     return results

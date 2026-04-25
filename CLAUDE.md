@@ -37,7 +37,7 @@ GitHub (raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main)
 | `_styles.py` | スタイルシート文字列定数（`SS_*`）と状態定数（`S_UNCHECKED`/`S_OK`/`S_ERROR`） |
 | `_widgets.py` | `DoubleClickButton` / `CustomTooltip` / `InstantTooltipFilter` / `ComponentTextEdit` / `ToolButton` / `CategoryHeader` および `COMPONENT_PATTERN` |
 | `_loader.py` | `fetch_manifest_index` / `fetch_script` / `_ensure_util_module` / `load_and_run` + `_script_cache` |
-| `_formatter.py` | `format_details_html` / `wrap_components` / `disambiguate_keys` / `normalize_structured`（戻り値: `(obj_to_details, severities)`） |
+| `_formatter.py` | `format_details_html` / `wrap_components` / `disambiguate_keys` / `normalize_structured` |
 | `_results.py` | `CheckResult` dataclass + `Severity` 定数（新 API。check スクリプトから `from _results import` で参照） |
 
 ### ローディングの流れ
@@ -128,7 +128,7 @@ def get_results():
 | `target`   | str  | 内部キー。DAG long path（`\|` 始まり）必須。同名衝突時の選択曖昧さを避けるため |
 | `message`  | str  | 短い結果概要（HTML 整形時に見出しとして表示） |
 | `details`  | list[str] | 詳細行リスト（`⚠ ` プレフィックス・インデント・`key: value` 形式は自動整形） |
-| `severity` | str  | `"error"`（赤）/ `"warning"`（黄）/ `"info"`。既定は `"error"` |
+| `severity` | str  | `"error"` / `"warning"` / `"info"`。既定は `"error"`。v1.7.0 時点では `"error"` のみ launcher が UI 反映。
 | `display`  | str  | 表示名の上書き（指定なら `disambiguate_keys` を使わずこの名前を使う） |
 
 **旧 API（互換維持）**: `list[dict]`
@@ -144,11 +144,11 @@ return [
 ```
 旧形式 `dict[str, list[str]]` も `normalize_structured()` で吸収される。
 
-### Severity 別のツール状態
-- `error`   → ツールボタンが **赤** + 件数バッジ
-- `warning` → ツールボタンが **黄** + 件数バッジ（誤検知の可能性込み）
-- `info`    → 状態には影響しないが結果リストには表示
-- 1 ツールの結果に複数 severity が混在する場合は **最も重い severity** がツール状態を決定する
+### Severity 別のツール状態（v1.7.0 〜）
+現在は **`error` のみ launcher が反応**。`warning` / `info` 定数は API として残してあるが
+ツール状態（ボタン色・バッジ）には反映されない。再導入する場合は
+`_styles.py` / `_widgets.CategoryHeader.setStatus` / `assetChecker._set_folder_state` を
+再拡張する。
 
 ### 共通の補足
 - `target` は **long path（`|` 始まり）** を入れる
@@ -181,9 +181,9 @@ return [
 
 ## ランチャーバージョン
 ```python
-LAUNCHER_VERSION = "1.6.0"  # assetChecker.py 上部
+LAUNCHER_VERSION = "1.7.0"  # assetChecker.py 上部
 ```
-ステータスバー右下に `v1.6.0` として表示される。assetChecker.py 本体（および `_styles` / `_widgets` / `_loader` / `_formatter` / `_results`）を編集したらこの値をバンプする。
+ステータスバー右下に `v1.7.0` として表示される。assetChecker.py 本体（および `_styles` / `_widgets` / `_loader` / `_formatter` / `_results`）を編集したらこの値をバンプする。
 
 ## 詳細表示の HTML 整形
 右パネルの詳細ビュー（`detail_view`）は `_format_details_html()` で HTML 化される：
@@ -230,7 +230,7 @@ QDialog (bg #060c18)
             │   └── "Info" QLabel (#88b8f0, 12px bold)
             └── detail_view (rounded 8px) - stretch 1
 └── ステータスバー QFrame#statusBar (h 30, bg #0b1628, top border)
-    [✗ N件エラー] [⚠ N件警告] [✓ N件 OK] [○ N件 未チェック] ... [v1.6.0]
+    [✗ N件エラー] [✓ N件 OK] [○ N件 未チェック] ... [v1.7.0]
 ```
 
 トップバー（タイトル / CHECK / ALL CHECK）は廃止。CHECK/ALL CHECK は左カラム上部・
@@ -291,14 +291,12 @@ QDialog (bg #060c18)
 | ツールボタン bg / 枠 / 文字 | `#0f1e34` / `#1a2e4a` / `#4878a0` |
 | ツール OK bg / 枠 / 文字 | `#061c14` / `#0a3020` / `#28c880` |
 | ツール ERROR bg / 枠 / 文字 | `#200c0c` / `#3a1010` / `#e05858` |
-| ツール WARNING bg / 枠 / 文字 | `#2a2210` / `#4a3818` / `#e0b060`（v1.6.0〜） |
 | FIX ボタン bg / hover | `#1e6ac0` / `#2878d0` |
 | CHECK ボタン bg / 枠 / 文字 | `#0d2e2a` / `#3ecfbe` / `#3ecfbe` |
 | ALL CHECK bg / 枠 / 文字 | `#0a1e38` / `#2878d0` / `#88b8f0` |
 | object_list 選択 bg / 枠 / 文字 | `#142440` / `#3ecfbe` / `#3ecfbe` |
 | カテゴリ見出し 文字 / hover | `#3a6888` / `#5a98c0` |
 | バッジ ERROR bg / 文字 | `#3a1010` / `#e05858` |
-| バッジ WARNING bg / 文字 | `#4a3818` / `#e0b060`（v1.6.0〜） |
 | ツールチップ bg / 枠 / 文字 | `#0b1628` / `#1a3050` / `#b8d4ee` |
 | ステータスバー version 文字 | `#263c58`（10px） |
 

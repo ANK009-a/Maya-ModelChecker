@@ -165,7 +165,7 @@ def get_results():
             target=parent,
             message=f"UV範囲外(0-1): {shape_short}（{len(bad_sets)} uvSets）",
             details=details,
-            severity=Severity.WARNING,
+            severity=Severity.ERROR,
         ))
 
     return results

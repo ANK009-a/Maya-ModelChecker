@@ -60,7 +60,7 @@ def get_results():
             details=[
                 f"Type: {t}",
             ],
-            severity=Severity.WARNING,
+            severity=Severity.ERROR,
         ))
 
     return results

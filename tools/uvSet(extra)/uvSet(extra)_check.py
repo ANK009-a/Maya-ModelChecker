@@ -172,7 +172,7 @@ def get_results():
             target=_parent_transform(shape),
             message=f"UVSet({', '.join(issues)})",
             details=details,
-            severity=Severity.WARNING,
+            severity=Severity.ERROR,
         ))
 
     return results

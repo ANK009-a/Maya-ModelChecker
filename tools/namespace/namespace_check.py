@@ -53,7 +53,7 @@ def get_results():
             target=ns,
             message=f"namespace: {ns}" + ("  [referenced]" if is_ref else ""),
             details=details,
-            severity=Severity.WARNING,
+            severity=Severity.ERROR,
         ))
     return results
 

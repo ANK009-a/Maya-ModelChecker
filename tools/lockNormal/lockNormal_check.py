@@ -157,7 +157,7 @@ def get_results():
             results.append(CheckResult(
                 target=tr,
                 message=" / ".join(locked_infos),
-                severity=Severity.WARNING,
+                severity=Severity.ERROR,
             ))
         else:
             # すべて失敗した場合のみエラーとして返す（不要ならこのブロックを削除）

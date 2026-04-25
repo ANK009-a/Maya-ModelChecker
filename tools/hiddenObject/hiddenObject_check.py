@@ -49,7 +49,7 @@ def get_results():
                     f"visibility: {vis}",
                     "fix で表示状態に戻す（削除はユーザーが判断してください）",
                 ],
-                severity=Severity.WARNING,
+                severity=Severity.ERROR,
             ))
     return results
 

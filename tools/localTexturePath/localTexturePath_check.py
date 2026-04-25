@@ -77,7 +77,7 @@ def get_results():
             target="(platform)",
             message="Windows 以外の環境では判定できません",
             details=[f"sys.platform = {sys.platform}"],
-            severity=Severity.INFO,
+            severity=Severity.ERROR,
         )]
 
     file_nodes = cmds.ls(type="file") or []
@@ -118,7 +118,7 @@ def get_results():
             target=node,
             message=f"local texture: {node} ({label})",
             details=details,
-            severity=Severity.WARNING,
+            severity=Severity.ERROR,
         ))
 
     return results

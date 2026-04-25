@@ -107,41 +107,26 @@ def disambiguate_keys(keys):
     return result
 
 
-_SEV_RANK = {None: 0, "info": 1, "warning": 2, "error": 3}
-
-
-def _max_severity(a, b):
-    """error > warning > info の優先度で大きい方を返す"""
-    return a if _SEV_RANK.get(a, 0) >= _SEV_RANK.get(b, 0) else b
-
-
 def normalize_structured(structured):
-    """check / fix の戻り値を (obj_to_details, severities) に正規化する。
-
-    Returns:
-        (obj_to_details, severities)
-        - obj_to_details : dict[str, list[str]]
-        - severities     : dict[str, str]   "error" / "warning" / "info"
+    """check / fix の戻り値を {key: [details]} に正規化する。
 
     受け付ける入力形式:
-        - dict[str, list[str]]                 : 旧形式。severity は "error" 既定
-        - list[dict]                           : 旧形式（transform/message/details）
-        - list[CheckResult]                    : 新形式（_results.CheckResult）
+        - dict[str, list[str]]    : 旧形式
+        - list[dict]              : 旧形式（transform/message/details）
+        - list[CheckResult]       : 新形式（_results.CheckResult）
         - 上記 list に dict と CheckResult が混在しても可
+
+    CheckResult / dict の severity フィールドは保持されるが、
+    現在 launcher 側では参照しない（v1.7.0 で WARNING UI を撤廃）。
     """
     obj_to_details = {}
-    severities = {}
-    DEFAULT_SEV = "error"
-
     if structured is None:
-        return obj_to_details, severities
+        return obj_to_details
 
     if isinstance(structured, dict):
         for k, v in structured.items():
-            key = str(k)
-            obj_to_details[key] = [str(x) for x in v] if isinstance(v, list) else [str(v)]
-            severities.setdefault(key, DEFAULT_SEV)
-        return obj_to_details, severities
+            obj_to_details[str(k)] = [str(x) for x in v] if isinstance(v, list) else [str(v)]
+        return obj_to_details
 
     if isinstance(structured, list):
         for entry in structured:
@@ -150,7 +135,6 @@ def normalize_structured(structured):
                 key = str(entry.target or "Unknown")
                 msg = getattr(entry, "message", "") or ""
                 details = entry.details or []
-                severity = getattr(entry, "severity", DEFAULT_SEV) or DEFAULT_SEV
                 lines = []
                 if msg:
                     lines.append(str(msg))
@@ -159,7 +143,6 @@ def normalize_structured(structured):
                 elif details:
                     lines.append(str(details))
                 obj_to_details.setdefault(key, []).extend(lines)
-                severities[key] = _max_severity(severities.get(key), severity)
                 continue
 
             # 旧 API: dict
@@ -168,7 +151,6 @@ def normalize_structured(structured):
             key = str(entry.get("transform") or entry.get("name") or "Unknown")
             msg = entry.get("message", "")
             details = entry.get("details", [])
-            severity = entry.get("severity", DEFAULT_SEV)
             lines = []
             if msg:
                 lines.append(str(msg))
@@ -177,6 +159,5 @@ def normalize_structured(structured):
             elif details:
                 lines.append(str(details))
             obj_to_details.setdefault(key, []).extend(lines)
-            severities[key] = _max_severity(severities.get(key), severity)
 
-    return obj_to_details, severities
+    return obj_to_details

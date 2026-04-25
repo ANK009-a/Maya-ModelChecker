@@ -31,7 +31,7 @@ def get_results():
             target=n,
             message=f"animLayer: {n}",
             details=details,
-            severity=Severity.WARNING,
+            severity=Severity.ERROR,
         ))
 
     return results

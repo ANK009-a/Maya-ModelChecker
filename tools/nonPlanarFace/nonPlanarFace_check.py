@@ -95,7 +95,7 @@ def get_results():
                 target=tr,
                 message=f"non-planar face: {len(collected)} 件",
                 details=details,
-                severity=Severity.WARNING,
+                severity=Severity.ERROR,
             ))
     finally:
         try:

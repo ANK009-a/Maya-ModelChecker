@@ -115,7 +115,7 @@ def get_results():
                 target=parent,
                 message=f"スキップ（フェース数 {n_faces} > {MAX_FACES_PER_MESH}）",
                 details=["フェース数が多すぎます。Maya の Mesh > Cleanup を使用してください。"],
-                severity=Severity.WARNING,
+                severity=Severity.ERROR,
             ))
             continue
 

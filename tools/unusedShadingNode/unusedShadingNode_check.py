@@ -84,7 +84,7 @@ def get_results():
                 f"Type: {t}",
                 "shadingEngine への接続なし",
             ],
-            severity=Severity.WARNING,
+            severity=Severity.ERROR,
         ))
     return results
 
