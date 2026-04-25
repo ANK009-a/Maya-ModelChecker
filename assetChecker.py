@@ -31,7 +31,7 @@ def maya_main_window():
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 GITHUB_API_INDEX    = f"{GITHUB_RAW}/tools/manifest_index.json"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.3.2"
+LAUNCHER_VERSION    = "1.3.3"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタン / トップバーボタンの高さ
 FIX_W        = 38   # FIX ボタンの幅
@@ -551,6 +551,17 @@ QTextEdit {
 }
 """
 
+    # オブジェクトリスト上部のツール名ラベル
+    _SS_OBJECT_LIST_TITLE = """
+QLabel {
+    color: #88b8f0;
+    font-size: 12px;
+    font-weight: bold;
+    padding: 2px 4px;
+    background: transparent;
+}
+"""
+
     # 左パネル外枠
     _SS_LEFT_PANEL = """
 QFrame#leftPanel {
@@ -687,10 +698,23 @@ QFrame#statusBar {
         right_lay.setContentsMargins(0, 0, 0, 0)
         right_lay.setSpacing(8)
 
+        # オブジェクトリスト + 上部のツール名ラベルを縦レイアウトでラップ
+        list_container = QtWidgets.QWidget()
+        list_container.setStyleSheet("background: transparent;")
+        list_lay = QtWidgets.QVBoxLayout(list_container)
+        list_lay.setContentsMargins(0, 0, 0, 0)
+        list_lay.setSpacing(4)
+
+        self.object_list_title = QtWidgets.QLabel("")
+        self.object_list_title.setStyleSheet(self._SS_OBJECT_LIST_TITLE)
+
         self.object_list = QtWidgets.QListWidget()
         self.object_list.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.object_list.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.object_list.setStyleSheet(self._SS_OBJECT_LIST)
+
+        list_lay.addWidget(self.object_list_title)
+        list_lay.addWidget(self.object_list, 1)
 
         self.detail_view = _ComponentTextEdit()
         self.detail_view.setReadOnly(True)
@@ -699,7 +723,7 @@ QFrame#statusBar {
         self.detail_view.componentClicked.connect(self._on_detail_component_clicked)
 
         # HTML mockup の比率: 37% / 63%
-        right_lay.addWidget(self.object_list, 37)
+        right_lay.addWidget(list_container, 37)
         right_lay.addWidget(self.detail_view, 63)
 
         self.object_list.currentItemChanged.connect(self.on_object_selected)
@@ -1082,6 +1106,11 @@ QFrame#statusBar {
                 result[path] = path
         return result
 
+    def _set_object_list_title(self, text):
+        """オブジェクトリスト上部のツール名ラベルを更新"""
+        if hasattr(self, "object_list_title"):
+            self.object_list_title.setText(text or "")
+
     def set_object_results(self, obj_to_details):
         self.object_to_details = obj_to_details or {}
         self.object_list.clear()
@@ -1143,6 +1172,7 @@ QFrame#statusBar {
         self._last_check_results[folder] = obj_to_details
 
         if show_details:
+            self._set_object_list_title(self._folder_titles.get(folder, folder))
             self.set_object_results(obj_to_details)
 
         self._set_folder_state(folder, _S_ERROR if has_issue else _S_OK, count)
@@ -1170,6 +1200,7 @@ QFrame#statusBar {
     def _show_last_results(self, folder):
         """シングルクリック時：直近のチェック結果を右パネルに表示する（再チェックは行わない）"""
         cached = self._last_check_results.get(folder)
+        self._set_object_list_title(self._folder_titles.get(folder, folder))
         self.set_object_results(cached if cached is not None else {})
 
     # ----------------------------------------------------------
@@ -1177,6 +1208,7 @@ QFrame#statusBar {
     # ----------------------------------------------------------
     def _run_fix(self, folder):
         self._select_check_results(folder)  # チェック結果オブジェクトを事前に Maya 選択
+        self._set_object_list_title(self._folder_titles.get(folder, folder))
         structured, text = load_and_run(folder, f"{folder}_fix.py", selection=[])
         if structured is not None:
             self.set_object_results(self.normalize_structured(structured))
@@ -1201,6 +1233,7 @@ QFrame#statusBar {
         self._all_check_summary   = []
         self._all_check_selection = sel
         self._set_busy(True)
+        self._set_object_list_title("CHECK")
         self.set_object_results({})
         self.detail_view.setPlainText("CHECK 実行中...")
         QtCore.QTimer.singleShot(0, self._step_all_check)
@@ -1213,6 +1246,7 @@ QFrame#statusBar {
         self._all_check_summary   = []
         self._all_check_selection = []   # 空リスト = シーン全体
         self._set_busy(True)
+        self._set_object_list_title("ALL CHECK")
         self.set_object_results({})
         self.detail_view.setPlainText("ALL CHECK 実行中...")
         QtCore.QTimer.singleShot(0, self._step_all_check)
