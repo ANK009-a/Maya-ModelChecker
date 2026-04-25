@@ -31,10 +31,10 @@ def maya_main_window():
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 GITHUB_API_INDEX    = f"{GITHUB_RAW}/tools/manifest_index.json"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.3.7"
+LAUNCHER_VERSION    = "1.4.0"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
-TOP_BAR_H    = 20   # 枠外トップバーの高さ（CHECK/ALL CHECK ボタン と object_list_title）
+TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
 FIX_W        = 38   # FIX ボタンの幅
 
 _script_cache = {}  # { "folder/script.py": "コード文字列" }
@@ -88,14 +88,32 @@ class _DoubleClickButton(QtWidgets.QPushButton):
 # ツールチップ即時表示フィルター
 # ============================================================
 class _InstantTooltipFilter(QtCore.QObject):
-    """ホバー時に遅延なくツールチップを表示するイベントフィルター"""
+    """ホバー後 _interval ms（既定 400ms）でツールチップを表示するイベントフィルター"""
+    _interval = 400
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._timer = QtCore.QTimer(self)
+        self._timer.setSingleShot(True)
+        self._timer.timeout.connect(self._show_for_target)
+        self._target = None
+
+    def _show_for_target(self):
+        obj = self._target
+        if not obj:
+            return
+        tip = obj.toolTip()
+        if tip:
+            pos = obj.mapToGlobal(QtCore.QPoint(0, obj.height() + 4))
+            QtWidgets.QToolTip.showText(pos, tip, obj)
+
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.Enter:
-            tip = obj.toolTip()
-            if tip:
-                pos = obj.mapToGlobal(QtCore.QPoint(0, obj.height() + 4))
-                QtWidgets.QToolTip.showText(pos, tip, obj)
+            self._target = obj
+            self._timer.start(self._interval)
         elif event.type() == QtCore.QEvent.Leave:
+            self._timer.stop()
+            self._target = None
             QtWidgets.QToolTip.hideText()
         return False
 
@@ -376,7 +394,7 @@ class assetChecker(QtWidgets.QDialog):
     # ----------------------------------------------------------
     _SS_DIALOG = """
 QDialog#assetChecker {
-    background-color: #060c18;
+    background: qlineargradient(x1:0, y1:0, x2:0.4, y2:1, stop:0 #080f1e, stop:1 #04080f);
 }
 QScrollBar:vertical {
     background: transparent;
@@ -472,7 +490,7 @@ QPushButton:disabled { background-color: #2a3a50; color: #506070; }
     _SS_BTN_ALL = """
 QPushButton {
     background-color: #0a1e38;
-    border: 1px solid #2878d0;
+    border: 1px solid rgba(40, 120, 208, 0.53);
     color: #88b8f0;
     border-radius: 6px;
     font-size: 11px;
@@ -481,7 +499,7 @@ QPushButton {
 }
 QPushButton:hover {
     background-color: #0e2444;
-    border: 1px solid #3a8ce0;
+    border: 1px solid rgba(40, 120, 208, 0.8);
 }
 QPushButton:pressed  { background-color: #08182e; }
 QPushButton:disabled {
@@ -495,7 +513,7 @@ QPushButton:disabled {
     _SS_BTN_CHECK = """
 QPushButton {
     background-color: #0d2e2a;
-    border: 1px solid #3ecfbe;
+    border: 1px solid rgba(62, 207, 190, 0.4);
     color: #3ecfbe;
     border-radius: 6px;
     font-size: 11px;
@@ -504,7 +522,7 @@ QPushButton {
 }
 QPushButton:hover {
     background-color: #112e2a;
-    border: 1px solid #5ee0d0;
+    border: 1px solid rgba(62, 207, 190, 0.7);
 }
 QPushButton:pressed  { background-color: #0a2420; }
 QPushButton:disabled {
@@ -544,7 +562,7 @@ QTextEdit {
     color: #b8d4ee;
     border: 1px solid #1a2e4a;
     border-radius: 8px;
-    padding: 8px 10px;
+    padding: 12px 14px;
     font-family: Consolas, "Courier New", monospace;
     font-size: 12px;
     selection-background-color: #142440;
@@ -552,13 +570,22 @@ QTextEdit {
 }
 """
 
-    # オブジェクトリスト上部のツール名ラベル
-    _SS_OBJECT_LIST_TITLE = """
+    # パネル上部のタイトル（Objects / Info）メインラベル
+    _SS_PANEL_TITLE_MAIN = """
 QLabel {
     color: #88b8f0;
     font-size: 12px;
     font-weight: bold;
-    padding: 2px 4px;
+    background: transparent;
+}
+"""
+
+    # パネル上部タイトルのサブラベル（Objects 右下のツール名や進捗）
+    _SS_PANEL_TITLE_SUB = """
+QLabel {
+    color: #3a6888;
+    font-size: 10px;
+    font-weight: normal;
     background: transparent;
 }
 """
@@ -634,8 +661,8 @@ QFrame#statusBar {
         body = QtWidgets.QWidget()
         body.setStyleSheet("background: transparent;")
         body_lay = QtWidgets.QHBoxLayout(body)
-        body_lay.setContentsMargins(10, 10, 10, 10)
-        body_lay.setSpacing(10)
+        body_lay.setContentsMargins(10, 6, 10, 10)
+        body_lay.setSpacing(6)
 
         # ---- 左カラム（CHECK/ALL CHECK + 左パネル）----
         # 右パネルの list_container（タイトル + object_list）と同じ構造で、
@@ -645,7 +672,7 @@ QFrame#statusBar {
         left_container.setFixedWidth(LEFT_PANEL_W)
         left_container_lay = QtWidgets.QVBoxLayout(left_container)
         left_container_lay.setContentsMargins(0, 0, 0, 0)
-        left_container_lay.setSpacing(4)
+        left_container_lay.setSpacing(6)
 
         # 上部: CHECK / ALL CHECK ボタン（枠外）
         top_btn_w = QtWidgets.QWidget()
@@ -693,7 +720,7 @@ QFrame#statusBar {
         left_inner = QtWidgets.QWidget()
         left_inner.setStyleSheet("background: transparent;")
         self.rows_layout = QtWidgets.QVBoxLayout(left_inner)
-        self.rows_layout.setContentsMargins(7, 7, 7, 7)
+        self.rows_layout.setContentsMargins(7, 0, 7, 7)
         self.rows_layout.setSpacing(3)
         scroll.setWidget(left_inner)
         self.left_scroll = scroll
@@ -710,26 +737,59 @@ QFrame#statusBar {
         right_w.setStyleSheet("background: transparent;")
         right_lay = QtWidgets.QHBoxLayout(right_w)
         right_lay.setContentsMargins(0, 0, 0, 0)
-        right_lay.setSpacing(8)
+        right_lay.setSpacing(6)
 
-        # オブジェクトリスト + 上部のツール名ラベルを縦レイアウトでラップ
+        # オブジェクトリスト + 上部の "Objects" タイトル（メイン + サブラベル）
         list_container = QtWidgets.QWidget()
         list_container.setStyleSheet("background: transparent;")
         list_lay = QtWidgets.QVBoxLayout(list_container)
         list_lay.setContentsMargins(0, 0, 0, 0)
-        list_lay.setSpacing(4)
+        list_lay.setSpacing(6)
 
-        self.object_list_title = QtWidgets.QLabel("ツール名")
-        self.object_list_title.setStyleSheet(self._SS_OBJECT_LIST_TITLE)
-        self.object_list_title.setFixedHeight(TOP_BAR_H)
+        obj_title_w = QtWidgets.QWidget()
+        obj_title_w.setStyleSheet("background: transparent;")
+        obj_title_w.setFixedHeight(TOP_BAR_H)
+        obj_title_lay = QtWidgets.QHBoxLayout(obj_title_w)
+        obj_title_lay.setContentsMargins(8, 0, 8, 0)
+        obj_title_lay.setSpacing(6)
+
+        obj_title_main = QtWidgets.QLabel("Objects")
+        obj_title_main.setStyleSheet(self._SS_PANEL_TITLE_MAIN)
+        self.object_list_title_sub = QtWidgets.QLabel("")
+        self.object_list_title_sub.setStyleSheet(self._SS_PANEL_TITLE_SUB)
+        self.object_list_title_sub.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+
+        obj_title_lay.addWidget(obj_title_main)
+        obj_title_lay.addStretch(1)
+        obj_title_lay.addWidget(self.object_list_title_sub)
+        # 既存呼び出しとの互換のため container も保持
+        self.object_list_title = obj_title_w
 
         self.object_list = QtWidgets.QListWidget()
         self.object_list.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         self.object_list.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.object_list.setStyleSheet(self._SS_OBJECT_LIST)
 
-        list_lay.addWidget(self.object_list_title)
+        list_lay.addWidget(obj_title_w)
         list_lay.addWidget(self.object_list, 1)
+
+        # 詳細ビュー + 上部の "Info" タイトル
+        detail_container = QtWidgets.QWidget()
+        detail_container.setStyleSheet("background: transparent;")
+        detail_lay = QtWidgets.QVBoxLayout(detail_container)
+        detail_lay.setContentsMargins(0, 0, 0, 0)
+        detail_lay.setSpacing(6)
+
+        info_title_w = QtWidgets.QWidget()
+        info_title_w.setStyleSheet("background: transparent;")
+        info_title_w.setFixedHeight(TOP_BAR_H)
+        info_title_lay = QtWidgets.QHBoxLayout(info_title_w)
+        info_title_lay.setContentsMargins(8, 0, 8, 0)
+        info_title_lay.setSpacing(6)
+        info_title_main = QtWidgets.QLabel("Info")
+        info_title_main.setStyleSheet(self._SS_PANEL_TITLE_MAIN)
+        info_title_lay.addWidget(info_title_main)
+        info_title_lay.addStretch(1)
 
         self.detail_view = _ComponentTextEdit()
         self.detail_view.setReadOnly(True)
@@ -737,9 +797,12 @@ QFrame#statusBar {
         self.detail_view.setStyleSheet(self._SS_DETAIL_VIEW)
         self.detail_view.componentClicked.connect(self._on_detail_component_clicked)
 
+        detail_lay.addWidget(info_title_w)
+        detail_lay.addWidget(self.detail_view, 1)
+
         # HTML mockup の比率: 37% / 63%
         right_lay.addWidget(list_container, 37)
-        right_lay.addWidget(self.detail_view, 63)
+        right_lay.addWidget(detail_container, 63)
 
         self.object_list.currentItemChanged.connect(self.on_object_selected)
         self.object_list.itemClicked.connect(self.on_object_clicked)
@@ -1122,9 +1185,9 @@ QFrame#statusBar {
         return result
 
     def _set_object_list_title(self, text):
-        """オブジェクトリスト上部のツール名ラベルを更新"""
-        if hasattr(self, "object_list_title"):
-            self.object_list_title.setText(text or "")
+        """Objects タイトル右側のサブラベル（ツール名 / 進捗）を更新"""
+        if hasattr(self, "object_list_title_sub"):
+            self.object_list_title_sub.setText(text or "")
 
     def set_object_results(self, obj_to_details):
         self.object_to_details = obj_to_details or {}
@@ -1277,6 +1340,7 @@ QFrame#statusBar {
 
         # 進捗を可視化（実行直前に表示更新）
         header_label = "CHECK" if self._all_check_selection else "ALL CHECK"
+        self._set_object_list_title(f"{header_label} [{current}/{total}]")
         lines = [f"{header_label} 実行中...  [{current}/{total}]", ""]
         for status, f in self._all_check_summary:
             mark = "✓" if status == "OK" else "✗"
@@ -1293,11 +1357,13 @@ QFrame#statusBar {
     def _finish_all_check(self):
         self._all_check_running = False
         self._set_busy(False)
-        header = "CHECK 結果" if self._all_check_selection else "ALL CHECK 結果"
+        header_label = "CHECK" if self._all_check_selection else "ALL CHECK"
+        header = f"{header_label} 結果"
         lines = [header, ""]
         for status, folder in self._all_check_summary:
             lines.append(f"  {status} : {folder}")
         self.set_object_results({"ALL_CHECK": lines})
+        self._set_object_list_title(header_label)
         self.detail_view.setPlainText("\n".join(lines))
 
     # ----------------------------------------------------------

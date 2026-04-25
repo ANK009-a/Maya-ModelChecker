@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>assetChecker</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: #040810; }
+body {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh;
+  font-family: "Segoe UI", "Yu Gothic UI", sans-serif;
+}
+
+/* ── Window ── */
+.window {
+  width: 620px;
+  height: 500px;
+  background: linear-gradient(160deg, #080f1e 0%, #04080f 100%);
+  display: flex;
+  flex-direction: column;
+  font-size: 12.5px;
+  color: #b8d4ee;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px #1a2e4a;
+  border-radius: 6px;
+}
+
+/* ── Top button bar ── */
+.top-bar { display: none; }
+
+/* ── Left column wrapper ── */
+.left-col {
+  width: 204px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.left-top-btns {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 26px;
+  width: 204px;
+}
+.left-top-btns .btn-check,
+.left-top-btns .btn-all {
+  flex: 1;
+  height: 26px;
+  font-size: 11px;
+  padding: 0;
+  border-radius: 5px;
+}
+.btn-check {
+  background: #0d2e2a; border: 1px solid rgba(62,207,190,.4); color: #3ecfbe;
+  border-radius: 6px; height: 28px; padding: 0 10px; font-size: 11px;
+  cursor: pointer; font-family: inherit; font-weight: 500;
+  transition: background .15s, border-color .15s;
+}
+.btn-check:hover { background: #112e2a; border-color: rgba(62,207,190,.7); }
+.btn-check:disabled { opacity: .4; cursor: default; }
+.btn-all {
+  background: #0a1e38; border: 1px solid rgba(40,120,208,.53); color: #88b8f0;
+  border-radius: 6px; height: 28px; padding: 0 10px; font-size: 11px;
+  cursor: pointer; font-family: inherit; font-weight: 600;
+  transition: background .15s, border-color .15s;
+}
+.btn-all:hover { background: #0e2444; border-color: rgba(40,120,208,.8); }
+.btn-all:disabled { opacity: .4; cursor: default; }
+
+/* ── Body ── */
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  padding: 6px 10px 10px 10px;
+  gap: 6px;
+}
+
+/* ── Left panel ── */
+.left-panel {
+  flex: 1;
+  background: #0b1628;
+  border-radius: 8px;
+  border: 1px solid #1a2e4a;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+.tool-list {
+  flex: 1;
+  overflow-y: scroll;
+  padding: 0 7px 7px 7px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.tool-list::-webkit-scrollbar { width: 6px; }
+.tool-list::-webkit-scrollbar-track { background: transparent; }
+.tool-list::-webkit-scrollbar-thumb { background: #1a3050; border-radius: 3px; }
+
+.tool-row { display: flex; gap: 4px; }
+.tool-btn {
+  flex: 1;
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: #0f1e34;
+  border: 1px solid #1a2e4a;
+  color: #4878a0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background .12s, border-color .12s, color .12s;
+  min-width: 0;
+  overflow: hidden;
+}
+.tool-btn:hover { background: #122030; border-color: #243c58; }
+.tool-btn.ok  { background: #061c14; border-color: #0a3020; color: #28c880; }
+.tool-btn.ok:hover  { background: #081e16; }
+.tool-btn.err { background: #200c0c; border-color: #3a1010; color: #e05858; }
+.tool-btn.err:hover { background: #240e0e; }
+.tool-btn.active { outline: 1px solid #3ecfbe44; }
+.tool-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.tool-badge {
+  background: #3a1010; border-radius: 3px;
+  padding: 1px 5px; font-size: 10px;
+  color: #e05858; flex-shrink: 0; margin-left: 4px;
+}
+.fix-btn {
+  width: 38px; height: 100%; background: #1e6ac0;
+  border: none; color: #fff; border-radius: 6px;
+  font-size: 11px; cursor: pointer; font-family: inherit;
+  font-weight: 600; flex-shrink: 0;
+  transition: background .12s;
+  min-height: 28px;
+}
+.fix-btn:hover { background: #2878d0; }
+
+/* ── Right panel ── */
+.right-panel { flex: 1; display: flex; gap: 6px; min-width: 0; }
+
+.list-col {
+  width: 37%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.detail-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.obj-list-title {
+  height: 26px;
+  line-height: 26px;
+  color: #88b8f0;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 0 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+}
+.obj-list-title .tool-sub {
+  font-size: 10px;
+  font-weight: normal;
+  color: #3a6888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.obj-list {
+  flex: 1;
+  background: #0b1628;
+  border-radius: 8px;
+  border: 1px solid #1a2e4a;
+  overflow-y: auto;
+  list-style: none;
+  flex-shrink: 0;
+}
+.obj-list::-webkit-scrollbar { width: 6px; }
+.obj-list::-webkit-scrollbar-track { background: transparent; }
+.obj-list::-webkit-scrollbar-thumb { background: #1a3050; border-radius: 3px; }
+.obj-list li {
+  padding: 7px 14px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  font-size: 12px;
+  color: #b8d4ee;
+  transition: background .1s, color .1s, border-color .1s;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.obj-list li:hover { background: #0f1e34; }
+.obj-list li.sel { background: #142440; color: #3ecfbe; border-color: #3ecfbe; }
+
+.detail-view {
+  flex: 1;
+  background: #0b1628;
+  border: 1px solid #1a2e4a;
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: #b8d4ee;
+  font-size: 12px;
+  line-height: 1.8;
+  font-family: "Consolas", "Courier New", monospace;
+  white-space: pre-wrap;
+  overflow-y: auto;
+}
+.detail-view::-webkit-scrollbar { width: 6px; }
+.detail-view::-webkit-scrollbar-track { background: transparent; }
+.detail-view::-webkit-scrollbar-thumb { background: #1a3050; border-radius: 3px; }
+.detail-view .dim { color: #2a4a68; }
+
+/* ── Status bar ── */
+.statusbar {
+  background: #0b1628;
+  border-top: 1px solid #1a2e4a;
+  padding: 5px 16px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  height: 20px;
+  flex-shrink: 0;
+  font-size: 11px;
+  border-radius: 0 0 6px 6px;
+}
+.s-err { color: #e05858; }
+.s-ok  { color: #28c880; }
+.s-unc { color: #4878a0; }
+.s-ver { margin-left: auto; color: #263c58; font-size: 10px; }
+
+/* ── Category header ── */
+.cat-header {
+  font-size: 10px;
+  letter-spacing: .12em;
+  color: #3a6888;
+  padding: 8px 6px 3px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #142030;
+  margin-bottom: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  user-select: none;
+  transition: color .15s;
+}
+.cat-header:first-child { padding-top: 4px; }
+.cat-header:hover { color: #5a98c0; }
+.cat-header .cat-name { flex: 1; }
+.cat-header .cat-badge {
+  background: #3a1010;
+  color: #e05858;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 10px;
+  letter-spacing: 0;
+  display: none;
+  margin-left: auto;
+}
+.cat-header .cat-badge.visible { display: inline-block; }
+.cat-header .cat-arrow {
+  font-size: 9px;
+  color: #2a5070;
+  transition: transform .2s;
+  flex-shrink: 0;
+}
+.cat-header.collapsed .cat-arrow {
+  transform: rotate(-90deg);
+}
+.cat-group.collapsed > .tool-row {
+  display: none;
+}
+
+/* ── Custom tooltip ── */
+#customTooltip {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  display: none;
+  max-width: 260px;
+  background: #0b1628;
+  border: 1px solid #1a3050;
+  border-radius: 7px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px #0d2040;
+  font-family: "Segoe UI", "Yu Gothic UI", sans-serif;
+}
+#customTooltip .tt-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #88b8f0;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+#customTooltip .tt-divider {
+  border: none;
+  border-top: 1px solid #1a3050;
+  margin: 6px 0;
+}
+#customTooltip .tt-desc {
+  font-size: 11px;
+  color: #7a9ab8;
+  line-height: 1.6;
+}
+#customTooltip .tt-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+#customTooltip .tt-cat {
+  font-size: 10px;
+  color: #3a6888;
+  background: #0f1e34;
+  border: 1px solid #1a2e4a;
+  border-radius: 3px;
+  padding: 1px 6px;
+}
+#customTooltip .tt-ver {
+  font-size: 10px;
+  color: #2a5070;
+  background: #0f1e34;
+  border: 1px solid #1a2e4a;
+  border-radius: 3px;
+  padding: 1px 6px;
+}
+@keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
+.busy { animation: pulse 1s infinite; }
+
+/* ── Custom tooltip ── */
+#customTooltip {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  display: none;
+  max-width: 260px;
+  background: #0b1628;
+  border: 1px solid #1a3050;
+  border-radius: 7px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px #0d2040;
+  font-family: "Segoe UI", "Yu Gothic UI", sans-serif;
+}
+#customTooltip .tt-title { font-size: 13px; font-weight: 600; color: #88b8f0; margin-bottom: 4px; line-height: 1.4; }
+#customTooltip .tt-divider { border: none; border-top: 1px solid #1a3050; margin: 6px 0; }
+#customTooltip .tt-desc { font-size: 11px; color: #7a9ab8; line-height: 1.6; }
+#customTooltip .tt-meta { display: flex; gap: 8px; margin-top: 6px; }
+#customTooltip .tt-cat { font-size: 10px; color: #3a6888; background: #0f1e34; border: 1px solid #1a2e4a; border-radius: 3px; padding: 1px 6px; }
+#customTooltip .tt-ver { font-size: 10px; color: #2a5070; background: #0f1e34; border: 1px solid #1a2e4a; border-radius: 3px; padding: 1px 6px; }
+</style>
+</head>
+<body>
+
+<div id="customTooltip">
+  <div class="tt-title" id="ttTitle"></div>
+  <hr class="tt-divider">
+  <div class="tt-desc" id="ttDesc"></div>
+  <div class="tt-meta">
+    <span class="tt-cat" id="ttCat"></span>
+    <span class="tt-ver" id="ttVer"></span>
+  </div>
+</div>
+
+<div class="window">
+  <!-- Body -->
+  <div class="body">
+    <!-- Left -->
+    <div class="left-col">
+      <div class="left-top-btns">
+        <button class="btn-check" id="btnCheck">CHECK</button>
+        <button class="btn-all"   id="btnAll">ALL CHECK</button>
+      </div>
+      <div class="left-panel">
+        <div class="tool-list" id="toolList" style="opacity: 1"></div>
+      </div>
+    </div>
+
+    <!-- Right -->
+    <div class="right-panel">
+      <div class="list-col">
+        <div class="obj-list-title" id="objListTitle"><span>Objects</span><span class="tool-sub" id="objListSub"></span></div>
+        <ul class="obj-list" id="objList"></ul>
+      </div>
+      <div class="detail-col">
+        <div class="obj-list-title">Info</div>
+        <div class="detail-view" id="detailView"><span class="dim">ツールをダブルクリックしてチェックを実行してください。</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status bar -->
+  <div class="statusbar">
+    <span class="s-err" id="sErr">✗  0件エラー</span>
+    <span class="s-ok"  id="sOk">✓  0件 OK</span>
+    <span class="s-unc" id="sUnc">○  0件 未チェック</span>
+    <span class="s-ver">v1.0.0</span>
+  </div>
+</div>
+
+<script>
+// ── Real manifest data (from ANK009-a/Maya-ModelChecker) ──────────────
+const TOOLS = [
+  { folder:"emptyGroup",     category:"Transform 系",  title:"Empty Group",          description:"子オブジェクトも shape も持たない空のグループ transform を検出します。",          has_fix:true,  version:"1.0.3" },
+  { folder:"hiddenObject",   category:"Transform 系",  title:"Hidden Object",        description:"visibility が OFF になっているオブジェクトを検出します。",                       has_fix:true,  version:"1.0.3" },
+  { folder:"freeze",         category:"Transform 系",  title:"Freeze Transform",     description:"移動・回転・スケール値がフリーズされていない transform を検出します。",           has_fix:true,  version:"1.0.3" },
+  { folder:"pivot",          category:"Transform 系",  title:"Pivot",                description:"ピボットがワールド原点にない mesh を検出します。",                              has_fix:false, version:"1.0.2" },
+  { folder:"negativeScale",  category:"Transform 系",  title:"Negative Scale",       description:"スケール値がマイナスの transform を検出します。",                               has_fix:true,  version:"1.0.3" },
+  { folder:"nonManifold",    category:"Mesh 形状系",   title:"Non-Manifold",         description:"非多様体エッジ・頂点を検出します。",                                           has_fix:false, version:"1.0.2" },
+  { folder:"laminaFace",     category:"Mesh 形状系",   title:"Lamina Face",          description:"同じ頂点を共有する重複フェース（ラミナフェース）を検出します。",                 has_fix:true,  version:"1.0.3" },
+  { folder:"reversedNormal", category:"Mesh 形状系",   title:"Reversed Normal",      description:"法線が逆向きのフェースを検出します。",                                         has_fix:true,  version:"1.0.3" },
+  { folder:"isolateVtx",     category:"Mesh 形状系",   title:"Isolated Vertex",      description:"エッジやフェースに接続されていない孤立頂点を検出します。",                      has_fix:false, version:"1.0.2" },
+  { folder:"overlappingVtx", category:"Mesh 形状系",   title:"Overlapping Vertex",   description:"同一座標に重複して存在する頂点を検出します。",                                  has_fix:true,  version:"1.0.3" },
+  { folder:"history",        category:"Mesh 属性系",   title:"Construction History", description:"コンストラクションヒストリーが残っている mesh を検出します。",                   has_fix:true,  version:"1.0.3" },
+  { folder:"vtxTweak",       category:"Mesh 属性系",   title:"Vertex Tweak",         description:"頂点トゥイーク (pnts 配列) が残っている mesh を検出します。",                   has_fix:true,  version:"1.0.3" },
+  { folder:"lockNormal",     category:"Mesh 属性系",   title:"Locked Normal",        description:"ロックされた法線 (Freeze Normals) を持つ mesh を検出します。",                  has_fix:true,  version:"1.0.3" },
+  { folder:"colorSet",       category:"Mesh 属性系",   title:"Color Set",            description:"カラーセットを持つ mesh を検出します。",                                        has_fix:true,  version:"1.0.3" },
+  { folder:"meshShapeName",  category:"Mesh 属性系",   title:"Mesh Shape Name",      description:"transform 名と Shape 名が一致しない mesh を検出します。",                       has_fix:true,  version:"1.0.3" },
+  { folder:"uv(0.0-1.0)",   category:"UV 系",         title:"UV Range",             description:"UV 座標が 0〜1 の範囲外にある mesh を検出します。",                            has_fix:false, version:"1.0.2" },
+  { folder:"uvSet(extra)",   category:"UV 系",         title:"UV Set (Extra)",       description:"map1 以外の余分な UV セットを持つ mesh を検出します。",                        has_fix:false, version:"1.0.2" },
+  { folder:"uvSet(error)",   category:"UV 系",         title:"UV Set (Error)",       description:"UV Set Editor に表示されないが UV データを保持している UVset を検出します。",  has_fix:true,  version:"1.0.3" },
+  { folder:"texturePath",    category:"テクスチャ系",  title:"Texture Path",         description:"パス未設定またはファイルが存在しない file ノードを検出します。",               has_fix:false, version:"1.1.2" },
+  { folder:"nameCollision",  category:"シーン系",      title:"Name Collision",       description:"シーン内に同名のノードが複数存在する場合を検出します。",                        has_fix:false, version:"1.0.2" },
+  { folder:"animationKey",   category:"シーン系",      title:"Animation Key",        description:"アニメーションキーと animLayer を検出します。",                               has_fix:true,  version:"1.1.3" },
+];
+
+const MOCK_ERRORS = {
+  freeze: {
+    "|root|grp_A|pSphere1": ["translateX: 12.5", "translateY: 0.0", "translateZ: -3.2"],
+    "|root|grp_B|pCylinder1": ["rotateX: 45.0", "rotateY: 0.0", "rotateZ: 90.0"],
+  },
+  negativeScale: {
+    "|root|grp_C|pCube1": ["scaleX: -1.0", "scaleY: 1.0", "scaleZ: 1.0"],
+  },
+  nameCollision: {
+    "|root|grp_A|pCube1": ["同名ノード: |root|grp_B|pCube1"],
+    "|root|grp_C|pCube1": ["同名ノード: |root|grp_A|pCube1"],
+  },
+  history: {
+    "|root|grp_A|pSphere1": ["コンストラクションヒストリーが残っています"],
+    "|root|grp_D|pTorus1":   ["コンストラクションヒストリーが残っています"],
+  },
+  texturePath: {
+    "file1": ["ファイルが見つかりません: C:/textures/diffuse.png"],
+    "file2": ["パスが未設定です"],
+  },
+};
+
+// ── State ──────────────────────────────────────────────────────────────
+const states     = {};   // 0=unchecked 1=ok 2=err
+const lastResult = {};   // folder -> obj_map
+TOOLS.forEach(t => { states[t.folder] = 0; lastResult[t.folder] = null; });
+
+// ── DOM refs ───────────────────────────────────────────────────────────
+const toolListEl  = document.getElementById("toolList");
+const objListEl   = document.getElementById("objList");
+const detailEl    = document.getElementById("detailView");
+const objTitleEl  = document.getElementById("objListTitle");
+const objSubEl    = document.getElementById("objListSub");
+
+function setObjTitle(text) {
+  if (objSubEl) objSubEl.textContent = text || "";
+}
+const btnCheck    = document.getElementById("btnCheck");
+const btnAll      = document.getElementById("btnAll");
+const sErr        = document.getElementById("sErr");
+const sOk         = document.getElementById("sOk");
+const sUnc        = document.getElementById("sUnc");
+
+const toolBtns = {};
+const fixBtns  = {};
+
+// ── Custom tooltip ──────────────────────────────────────────
+const tooltip   = document.getElementById("customTooltip");
+const ttTitle   = document.getElementById("ttTitle");
+const ttDesc    = document.getElementById("ttDesc");
+const ttCat     = document.getElementById("ttCat");
+const ttVer     = document.getElementById("ttVer");
+let ttTimer = null;
+
+function showTooltip(e, tool) {
+  ttTitle.textContent = tool.title;
+  ttDesc.textContent  = tool.description;
+  ttCat.textContent   = tool.category;
+  ttVer.textContent   = `v${tool.version}`;
+  tooltip.style.display = "block";
+  positionTooltip(e);
+}
+
+function positionTooltip(e) {
+  const tw = tooltip.offsetWidth;
+  const th = tooltip.offsetHeight;
+  let x = e.clientX + 14;
+  let y = e.clientY + 14;
+  if (x + tw > window.innerWidth  - 8) x = e.clientX - tw - 8;
+  if (y + th > window.innerHeight - 8) y = e.clientY - th - 8;
+  tooltip.style.left = x + "px";
+  tooltip.style.top  = y + "px";
+}
+
+function hideTooltip() {
+  tooltip.style.display = "none";
+  if (ttTimer) { clearTimeout(ttTimer); ttTimer = null; }
+}
+
+document.addEventListener("mousemove", e => {
+  if (tooltip.style.display === "block") positionTooltip(e);
+});
+
+// ── Build left panel (grouped by category) ────────────────────────────
+const catHeaders = {};  // category -> { hdr, folders[] }
+
+let lastCat = null;
+let currentGroup = null;
+
+TOOLS.forEach(t => {
+  if (t.category !== lastCat) {
+    lastCat = t.category;
+
+    const group = document.createElement("div");
+    group.className = "cat-group";
+
+    const hdr = document.createElement("div");
+    hdr.className = "cat-header";
+    hdr.innerHTML = `<span class="cat-arrow">▾</span><span class="cat-name">${t.category}</span><span class="cat-badge"></span>`;
+    hdr.addEventListener("click", () => {
+      group.classList.toggle("collapsed");
+      hdr.classList.toggle("collapsed");
+    });
+
+    group.classList.add("collapsed");
+    hdr.classList.add("collapsed");
+
+    catHeaders[t.category] = { hdr, folders: [] };
+
+    group.appendChild(hdr);
+    toolListEl.appendChild(group);
+    currentGroup = group;
+  }
+
+  catHeaders[t.category].folders.push(t.folder);
+
+  const row = document.createElement("div");
+  row.className = "tool-row";
+
+  const btn = document.createElement("button");
+  btn.className = "tool-btn";
+  // title属性は使わずカスタムツールチップで表示
+  btn.innerHTML = `<span class="tool-name">○  ${t.title}</span>`;
+  toolBtns[t.folder] = btn;
+
+  btn.addEventListener("mouseenter", e => {
+    ttTimer = setTimeout(() => showTooltip(e, t), 400);
+  });
+  btn.addEventListener("mouseleave", hideTooltip);
+
+  // Single click → show cached result
+  let clickTimer = null;
+  btn.addEventListener("click", () => {
+    if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; return; }
+    clickTimer = setTimeout(() => { clickTimer = null; showResults(t.folder); }, 200);
+  });
+  // Double click → run check
+  btn.addEventListener("dblclick", () => {
+    if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+    runCheck(t.folder);
+  });
+
+  const fix = document.createElement("button");
+  fix.className = "fix-btn";
+  fix.textContent = "FIX";
+  fix.style.display = "none";
+  fix.addEventListener("click", () => runFix(t.folder));
+  fixBtns[t.folder] = fix;
+
+  row.appendChild(btn);
+  row.appendChild(fix);
+  currentGroup.appendChild(row);
+});
+
+// ── State helpers ──────────────────────────────────────────────────────
+function updateCatBadge(category) {
+  const entry = catHeaders[category];
+  if (!entry) return;
+  const errCount = entry.folders.reduce((sum, f) => sum + (states[f] === 2 ? (lastResult[f] ? Object.keys(lastResult[f]).length : 1) : 0), 0);
+  const badge = entry.hdr.querySelector(".cat-badge");
+  if (errCount > 0) {
+    badge.textContent = errCount;
+    badge.classList.add("visible");
+  } else {
+    badge.classList.remove("visible");
+  }
+}
+
+function setToolState(folder, state, count = 0) {
+  states[folder] = state;
+  const btn = toolBtns[folder];
+  const fix = fixBtns[folder];
+  const icon = state===2 ? "✗" : state===1 ? "✓" : "○";
+  const suffix = state===2 && count > 0 ? `` : "";
+  btn.className = "tool-btn" + (state===2?" err": state===1?" ok":"");
+
+  const t = TOOLS.find(t=>t.folder===folder);
+  const label = t?.title || folder;
+  if (state === 2) {
+    btn.innerHTML = `<span class="tool-name">${icon}  ${label}</span><span class="tool-badge">${count}</span>`;
+  } else {
+    btn.innerHTML = `<span class="tool-name">${icon}  ${label}</span>`;
+  }
+  btn.title = t ? `${t.title}\n${t.description}\nv${t.version}` : folder;
+
+  const tool = TOOLS.find(t=>t.folder===folder);
+  const showFix = state===2 && tool?.has_fix;
+  fix.style.display = showFix ? "block" : "none";
+
+  // Update category badge
+  if (tool?.category) updateCatBadge(tool.category);
+}
+
+function updateStatus() {
+  const vals = Object.values(states);
+  sErr.textContent = `✗  ${vals.filter(s=>s===2).length}件エラー`;
+  sOk.textContent  = `✓  ${vals.filter(s=>s===1).length}件 OK`;
+  sUnc.textContent = `○  ${vals.filter(s=>s===0).length}件 未チェック`;
+}
+
+// ── Right panel ────────────────────────────────────────────────────────
+function showResults(folder) {
+  const res = lastResult[folder];
+  const t = TOOLS.find(t=>t.folder===folder);
+  setObjTitle(t?.title || folder);
+  populateRight(res || {});
+}
+
+function populateRight(objMap) {
+  objListEl.innerHTML = "";
+  const keys = Object.keys(objMap);
+
+  if (keys.length === 0) {
+    detailEl.innerHTML = '<span class="dim">(結果なし)</span>';
+    return;
+  }
+
+  keys.forEach((key, i) => {
+    const parts = key.replace(/^\|/, "").split("|");
+    const label = parts[parts.length - 1];
+    const li = document.createElement("li");
+    li.textContent = label;
+    li.title = key;
+    li.addEventListener("click", () => {
+      objListEl.querySelectorAll("li").forEach(l => l.classList.remove("sel"));
+      li.classList.add("sel");
+      detailEl.textContent = (objMap[key] || []).join("\n");
+    });
+    objListEl.appendChild(li);
+    if (i === 0) {
+      li.classList.add("sel");
+      detailEl.textContent = (objMap[key] || []).join("\n");
+    }
+  });
+}
+
+// ── Check / Fix ────────────────────────────────────────────────────────
+function runCheck(folder) {
+  const errData = MOCK_ERRORS[folder];
+  const obj = errData ? {...errData} : {};
+  lastResult[folder] = obj;
+  const isErr = Object.keys(obj).length > 0;
+  setToolState(folder, isErr ? 2 : 1, Object.keys(obj).length);
+  const t = TOOLS.find(t=>t.folder===folder);
+  setObjTitle(t?.title || folder);
+  populateRight(obj);
+  updateStatus();
+}
+
+function runFix(folder) {
+  lastResult[folder] = {};
+  setToolState(folder, 1, 0);
+  populateRight({});
+  detailEl.textContent = `✓  FIX 完了: ${folder}`;
+  updateStatus();
+}
+
+// ── ALL CHECK ──────────────────────────────────────────────────────────
+let allRunning = false;
+function runAllCheck() {
+  if (allRunning) return;
+  allRunning = true;
+  setBusy(true, "all");
+  objListEl.innerHTML = "";
+  detailEl.innerHTML = '<span class="dim">ALL CHECK 実行中...</span>';
+  let i = 0;
+
+  function step() {
+    if (i >= TOOLS.length) {
+      allRunning = false;
+      setBusy(false);
+      const lines = ["ALL CHECK 完了\n"];
+      TOOLS.forEach(t => {
+        const icon = states[t.folder]===2?"✗ ERROR":"✓ OK";
+        lines.push(`${icon}  ${t.title}`);
+      });
+      setObjTitle("ALL CHECK");
+      populateRight({"ALL_CHECK": lines});
+      return;
+    }
+    // 進捗表示
+    const cur = i + 1;
+    const total = TOOLS.length;
+    const lines = [`ALL CHECK 実行中...  [${cur}/${total}]`, ""];
+    _allSummary.forEach(([st, f]) => {
+      const t = TOOLS.find(t=>t.folder===f);
+      lines.push(`  ${st==="OK"?"✓":"✗"}  ${t?.title||f}`);
+    });
+    lines.push(`  →  ${TOOLS[i]?.title||TOOLS[i]?.folder}`);
+    detailEl.textContent = lines.join("\n");
+    setObjTitle(`ALL CHECK [${cur}/${total}]`);
+    const folder = TOOLS[i++].folder;
+    runCheck(folder);
+    _allSummary.push([states[folder]===2?"ERROR":"OK", folder]);
+    setTimeout(step, 60);
+  }
+  step();
+}
+
+function runCheckSelected() {
+  if (allRunning) return;
+  allRunning = true;
+  setBusy(true, "check");
+  objListEl.innerHTML = "";
+  detailEl.innerHTML = '<span class="dim">CHECK 実行中...</span>';
+  let i = 0;
+  function step() {
+    if (i >= TOOLS.length) {
+      allRunning = false;
+      setBusy(false);
+      const lines = ["CHECK 完了\n"];
+      TOOLS.forEach(t => {
+        const icon = states[t.folder]===2?"✗ ERROR":"✓ OK";
+        lines.push(`${icon}  ${t.folder}`);
+      });
+      populateRight({"CHECK": lines});
+      return;
+    }
+    runCheck(TOOLS[i++].folder);
+    setTimeout(step, 60);
+  }
+  step();
+}
+
+function setBusy(busy, mode = "all") {
+  btnCheck.disabled = busy;
+  btnAll.disabled   = busy;
+  if (busy) {
+    btnAll.classList.toggle("busy",   mode === "all");
+    btnCheck.classList.toggle("busy", mode === "check");
+    btnAll.textContent   = mode === "all"   ? "実行中..." : "ALL CHECK";
+    btnCheck.textContent = mode === "check" ? "実行中..." : "CHECK";
+  } else {
+    btnAll.classList.remove("busy");
+    btnCheck.classList.remove("busy");
+    btnAll.textContent   = "ALL CHECK";
+    btnCheck.textContent = "CHECK";
+  }
+  Object.values(toolBtns).forEach(b => b.disabled = busy);
+  if (!busy) updateStatus();
+}
+
+btnCheck.addEventListener("click", runCheckSelected);
+btnAll.addEventListener("click", runAllCheck);
+
+updateStatus();
+</script>
+</body>
+</html>

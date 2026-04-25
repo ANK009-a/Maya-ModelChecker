@@ -128,7 +128,7 @@ def get_results():
 |------|-----|------|
 | `LEFT_PANEL_W` | 204 | 左カラム全体の幅 px（CHECK/ALL CHECK ボタンと左パネル本体を内包） |
 | `BTN_H`        | 28  | ツールボタンの高さ px |
-| `TOP_BAR_H`    | 20  | 枠外トップバーの高さ px（CHECK/ALL CHECK と object_list_title） |
+| `TOP_BAR_H`    | 26  | 枠外トップバーの高さ px（CHECK/ALL CHECK / Objects / Info タイトル） |
 | `FIX_W`        | 38  | FIX ボタンの幅 px |
 
 ## ランチャーバージョン
@@ -160,9 +160,9 @@ self.resize(600, 700)  # __init__ 内
 QDialog (bg #060c18)
 └── body (margin 10, spacing 10)
     ├── left_container QVBoxLayout (transparent, fixedW 204, spacing 4)
-    │   ├── 上部ボタン行 QHBoxLayout (spacing 6) ← 枠外、高さ TOP_BAR_H=20
-    │   │   ├── CHECK (TOP_BAR_H=20, Expanding)
-    │   │   └── ALL CHECK (TOP_BAR_H=20, Expanding)
+    │   ├── 上部ボタン行 QHBoxLayout (spacing 6) ← 枠外、高さ TOP_BAR_H=26
+    │   │   ├── CHECK (TOP_BAR_H=26, Expanding)
+    │   │   └── ALL CHECK (TOP_BAR_H=26, Expanding)
     │   └── 左パネル QFrame#leftPanel (rounded 8px, bg #0b1628, border #1a2e4a)
     │       └── ツール一覧 QScrollArea (transparent, no border)
     │           └── rows_layout QVBoxLayout (margin 7, spacing 3)
@@ -171,11 +171,16 @@ QDialog (bg #060c18)
     │               ├── _CategoryHeader (Mesh 形状系)
     │               ├── ...
     │               └── stretch
-    └── 右パネル QHBoxLayout (spacing 8)
-        ├── list_container QVBoxLayout (spacing 4) - stretch 37
-        │   ├── object_list_title QLabel (現在のツール名表示) ← 枠外、高さ TOP_BAR_H=20
+    └── 右パネル QHBoxLayout (spacing 6)
+        ├── list_container QVBoxLayout (spacing 6) - stretch 37
+        │   ├── obj_title QHBoxLayout ← 枠外、高さ TOP_BAR_H=26
+        │   │   ├── "Objects" QLabel (#88b8f0, 12px bold)
+        │   │   └── object_list_title_sub QLabel (#3a6888, 10px) 右寄せ
         │   └── object_list (rounded 8px) - stretch 1
-        └── detail_view  (rounded 8px) - stretch 63
+        └── detail_container QVBoxLayout (spacing 6) - stretch 63
+            ├── info_title QHBoxLayout ← 枠外、高さ TOP_BAR_H=26
+            │   └── "Info" QLabel (#88b8f0, 12px bold)
+            └── detail_view (rounded 8px) - stretch 1
 └── ステータスバー QFrame#statusBar (h 30, bg #0b1628, top border)
     [✗ N件エラー] [✓ N件 OK] [○ N件 未チェック] ... [v1.2.0]
 ```
