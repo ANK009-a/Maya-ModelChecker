@@ -1,10 +1,21 @@
 # vtxTweak_fix.py
-# tweak（pnts オフセット）のみを焼き込み、skinCluster / blendShape / cluster などの
-# デフォーマーはそのまま残す。
-# 内部的には Maya の "Edit > Delete by Type > Non-Deformer History" 相当
-# （cmds.bakePartialHistory(prePostDeformers=True)）を使う。
+# pnts オフセットを mesh の vrts に直接加算して pnts を 0 化する。
+# ヒストリー（コンストラクションヒストリー / デフォーマーチェーン）には一切触らないため、
+# skinCluster / blendShape / cluster などのデフォーマーがまったく影響を受けない。
+#
+# 仕組み:
+#   visible 頂点位置 = vrts[i] + pnts[i]
+#   → vrts[i] := vrts[i] + pnts[i] ; pnts[i] := 0
+#   とすれば見た目は変わらず pnts を消せる。
+#
+# 注意:
+#   shape の inMesh が deformer 等で上書きされている場合、vrts への書き込みは
+#   評価時に上書きされて反映されないことがある。その場合は別途
+#   bakePartialHistory 等のヒストリー操作が必要。
 
 import maya.cmds as cmds
+
+TOL = 1e-9
 
 
 def _collect_mesh_transforms(selected_only=True):
@@ -21,12 +32,49 @@ def _collect_mesh_transforms(selected_only=True):
     return mesh_transforms
 
 
-def fix(selected_only=True):
+def _bake_pnts_for_shape(shape):
     """
-    tweak（pnts）だけを焼き込み、デフォーマーは保持する。
+    shape の pnts を vrts に焼き込み、pnts を 0 化する。
     Returns:
-        list[dict]: 構造化結果
+        (baked_count, skipped_count)
+        baked_count: 焼き込みに成功した頂点数
+        skipped_count: 書き込みエラー等で焼けなかった頂点数
     """
+    try:
+        indices = cmds.getAttr(f"{shape}.pnts", multiIndices=True) or []
+    except Exception:
+        return 0, 0
+
+    baked = 0
+    skipped = 0
+    for i in indices:
+        try:
+            pnts_val = cmds.getAttr(f"{shape}.pnts[{i}]")[0]
+        except Exception:
+            skipped += 1
+            continue
+
+        if not any(abs(v) > TOL for v in pnts_val):
+            continue
+
+        try:
+            vrts_val = cmds.getAttr(f"{shape}.vrts[{i}]")[0]
+            new_pos = (
+                vrts_val[0] + pnts_val[0],
+                vrts_val[1] + pnts_val[1],
+                vrts_val[2] + pnts_val[2],
+            )
+            cmds.setAttr(f"{shape}.vrts[{i}]", *new_pos)
+            cmds.setAttr(f"{shape}.pnts[{i}]", 0.0, 0.0, 0.0, type="double3")
+            baked += 1
+        except Exception:
+            skipped += 1
+            continue
+
+    return baked, skipped
+
+
+def fix(selected_only=True):
     results = []
 
     mesh_transforms = _collect_mesh_transforms(selected_only=selected_only)
@@ -38,20 +86,28 @@ def fix(selected_only=True):
 
     try:
         for t in mesh_transforms:
-            try:
-                # prePostDeformers=True で tweak / polyTweak など
-                # デフォーマー前後の履歴のみを焼き込む（skinCluster 等は保持）
-                cmds.bakePartialHistory(t, prePostDeformers=True)
+            shapes = cmds.listRelatives(t, s=True, ni=True, type="mesh", fullPath=True) or []
+            total_baked = 0
+            total_skipped = 0
+            for shape in shapes:
+                b, s = _bake_pnts_for_shape(shape)
+                total_baked += b
+                total_skipped += s
+
+            if total_baked == 0 and total_skipped == 0:
+                continue
+
+            if total_skipped == 0:
                 results.append({
                     "transform": t,
-                    "message": "tweak を焼き込みました（デフォーマー保持）",
+                    "message": f"{total_baked} 頂点の pnts を焼き込みました（ヒストリー保持）",
                     "ok": True,
                 })
-            except Exception as e:
+            else:
                 results.append({
                     "transform": t,
-                    "message": f"bakePartialHistory に失敗: {e}",
-                    "ok": False,
+                    "message": f"{total_baked} 頂点を焼き込み / {total_skipped} 頂点で書き込み失敗",
+                    "ok": total_baked > 0,
                 })
     finally:
         try:

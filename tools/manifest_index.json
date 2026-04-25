@@ -15,7 +15,7 @@
   {"folder": "nGon",           "category": "Mesh 形状系",   "title": "N-gon",                "description": "5 角以上のフェース（N-gon）を検出します。修正は破壊的なため手動推奨。",                                            "has_fix": false, "version": "1.0.0"},
 
   {"folder": "history",        "category": "Mesh 属性系",   "title": "History",              "description": "コンストラクションヒストリーが残っている mesh を検出します。",                                                     "has_fix": true,  "version": "1.1.0"},
-  {"folder": "vtxTweak",       "category": "Mesh 属性系",   "title": "Vertex CVs",           "description": "頂点トゥイーク (pnts 配列) が残っている mesh を検出します。FIX は tweak のみを焼き込み、skinCluster / blendShape などのデフォーマーは保持します。", "has_fix": true,  "version": "1.2.0"},
+  {"folder": "vtxTweak",       "category": "Mesh 属性系",   "title": "Vertex CVs",           "description": "頂点トゥイーク (pnts 配列) が残っている mesh を検出します。FIX は pnts を vrts に焼き込んで pnts を 0 化します。ヒストリーには一切触りません。", "has_fix": true,  "version": "1.3.0"},
   {"folder": "lockNormal",     "category": "Mesh 属性系",   "title": "Locked Normal",        "description": "ロックされた法線 (Freeze Normals) を持つ mesh を検出します。",                                                     "has_fix": true,  "version": "1.0.3"},
   {"folder": "colorSet",       "category": "Mesh 属性系",   "title": "Color Set",            "description": "カラーセットを持つ mesh を検出します。",                                                                              "has_fix": true,  "version": "1.0.3"},
   {"folder": "meshShapeName",  "category": "Mesh 属性系",   "title": "Shape Name",           "description": "transform 名と Shape 名が一致しない mesh を検出します。",                                                          "has_fix": true,  "version": "1.1.0"},
