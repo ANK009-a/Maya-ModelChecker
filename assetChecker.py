@@ -31,7 +31,7 @@ def maya_main_window():
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 GITHUB_API_INDEX    = f"{GITHUB_RAW}/tools/manifest_index.json"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.3.3"
+LAUNCHER_VERSION    = "1.3.4"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタン / トップバーボタンの高さ
 FIX_W        = 38   # FIX ボタンの幅
@@ -705,7 +705,7 @@ QFrame#statusBar {
         list_lay.setContentsMargins(0, 0, 0, 0)
         list_lay.setSpacing(4)
 
-        self.object_list_title = QtWidgets.QLabel("")
+        self.object_list_title = QtWidgets.QLabel("ツール名")
         self.object_list_title.setStyleSheet(self._SS_OBJECT_LIST_TITLE)
 
         self.object_list = QtWidgets.QListWidget()
@@ -1256,10 +1256,23 @@ QFrame#statusBar {
             self._finish_all_check()
             return
         folder = self.folders[self._all_check_index]
+        title  = self._folder_titles.get(folder, folder)
+        total  = len(self.folders)
+        current = self._all_check_index + 1
+
+        # 進捗を可視化（実行直前に表示更新）
+        header_label = "CHECK" if self._all_check_selection else "ALL CHECK"
+        lines = [f"{header_label} 実行中...  [{current}/{total}]", ""]
+        for status, f in self._all_check_summary:
+            mark = "✓" if status == "OK" else "✗"
+            lines.append(f"  {mark}  {self._folder_titles.get(f, f)}")
+        lines.append(f"  →  {title}")
+        self.detail_view.setPlainText("\n".join(lines))
+        QtWidgets.QApplication.processEvents()
+
         self._all_check_index += 1
         has_issue = self.run_check(folder, show_details=False, selection=self._all_check_selection)
         self._all_check_summary.append(("ERROR" if has_issue else "OK", folder))
-        QtWidgets.QApplication.processEvents()
         QtCore.QTimer.singleShot(0, self._step_all_check)
 
     def _finish_all_check(self):
