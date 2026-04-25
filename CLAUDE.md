@@ -75,7 +75,7 @@ GitHub (raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main)
 | 2 | **Mesh 形状系** | nonManifold → laminaFace → reversedNormal → isolateVtx → overlappingVtx → nonPlanarFace |
 | 3 | **Mesh 属性系** | history → vtxTweak → lockNormal → colorSet → meshShapeName |
 | 4 | **UV 系** | uv(0.0-1.0) → uvSet(extra) → uvSet(error) |
-| 5 | **テクスチャ系** | texturePath |
+| 5 | **テクスチャ系** | texturePath → localTexturePath |
 | 6 | **シーン系** | nameCollision → animationKey → displayLayer → unusedShadingNode → unknownNode → namespace → scriptNode |
 
 新ツールを追加する際は適切なカテゴリの末尾に追加する。カテゴリ自体を新設する場合は
