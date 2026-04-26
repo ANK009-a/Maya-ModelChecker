@@ -392,13 +392,18 @@ class CategoryHeader(QtWidgets.QWidget):
 # ============================================================
 class ElidedLabel(QtWidgets.QLabel):
     """幅に収まらないテキストを末尾 '...' で省略する QLabel。
-    setSizePolicy を Ignored にしているため親レイアウトを押し広げない。"""
+    minimumSizeHint を (0, h) に上書きしているため親レイアウトを押し広げない。
+    レイアウト側で stretch factor を与えて使う。"""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._full_text = self.text()
-        self.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
         self.setMinimumWidth(0)
+
+    def minimumSizeHint(self):
+        h = super().minimumSizeHint().height()
+        return QtCore.QSize(0, h)
 
     def setText(self, text):
         self._full_text = text
@@ -409,7 +414,11 @@ class ElidedLabel(QtWidgets.QLabel):
         self._apply_elide()
 
     def _apply_elide(self):
+        w = self.width()
+        if w <= 0:
+            super().setText(self._full_text)
+            return
         elided = self.fontMetrics().elidedText(
-            self._full_text, QtCore.Qt.ElideRight, max(self.width(), 1)
+            self._full_text, QtCore.Qt.ElideRight, w
         )
         super().setText(elided)

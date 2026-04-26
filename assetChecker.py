@@ -252,8 +252,7 @@ class assetChecker(QtWidgets.QDialog):
         self.object_list_title_sub.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
 
         obj_title_lay.addWidget(obj_title_main)
-        obj_title_lay.addStretch(1)
-        obj_title_lay.addWidget(self.object_list_title_sub)
+        obj_title_lay.addWidget(self.object_list_title_sub, 1)
         self.object_list_title = obj_title_w
 
         self.object_list = QtWidgets.QListWidget()
