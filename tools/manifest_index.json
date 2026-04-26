@@ -2,7 +2,7 @@
   {"folder": "emptyGroup",     "category": "Transform 系",  "title": "Empty Group",          "description": "子オブジェクトも shape も持たない空のグループ transform を検出します。",                                            "has_fix": true,  "version": "1.1.0"},
   {"folder": "hiddenObject",   "category": "Transform 系",  "title": "Hidden Object",        "description": "visibility が OFF になっているオブジェクトを検出します。",                                                         "has_fix": true,  "version": "1.2.0"},
   {"folder": "freeze",         "category": "Transform 系",  "title": "Freeze Transform",     "description": "移動・回転・スケール値がフリーズされていない transform を検出します。",                                             "has_fix": true,  "version": "1.1.0"},
-  {"folder": "pivot",          "category": "Transform 系",  "title": "Pivot",                "description": "ピボットがワールド原点にない mesh を検出します。ピボットがメッシュの bounding box 内にある場合は意図的とみなしてスキップします（目など）。",                    "has_fix": false, "version": "1.3.0"},
+  {"folder": "pivot",          "category": "Transform 系",  "title": "Pivot",                "description": "ピボットがローカル原点(0,0,0)からズレている mesh を検出します。ロケーター下の eye など親に位置情報を持たせている構造は誤検知しません。",                      "has_fix": false, "version": "1.4.0"},
   {"folder": "negativeScale",  "category": "Transform 系",  "title": "Negative Scale",       "description": "スケール値がマイナスの transform を検出します。",                                                                  "has_fix": true,  "version": "1.1.0"},
   {"folder": "animCurve",      "category": "Transform 系",  "title": "Animation Key",        "description": "animCurve ノード（アニメーションキー）を検出します。選択がある場合はその配下のみ。",                                "has_fix": true,  "version": "1.3.0"},
 
