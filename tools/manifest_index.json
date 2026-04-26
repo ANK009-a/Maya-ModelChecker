@@ -31,6 +31,7 @@
   {"folder": "layer",          "category": "シーン系",      "title": "Layer",                "description": "animLayer（BaseAnimation 含む）と defaultLayer / defaultRenderLayer 以外の displayLayer・renderLayer を検出します。FIX は animLayer・displayLayer のみ（renderLayer は renderSetup が参照を持つため Render Setup ウィンドウから手動削除）。シーン全体が常に対象。", "has_fix": true,  "version": "1.2.0"},
   {"folder": "unusedShadingNode", "category": "シーン系",   "title": "Unused Shading Node",  "description": "shadingEngine に到達しない未使用シェーディングノード（マテリアル / テクスチャ / utility）を検出します。",         "has_fix": true,  "version": "1.2.0"},
   {"folder": "unknownNode",    "category": "シーン系",      "title": "Unknown Node / Plugin", "description": "unknown ノード（型: unknown / unknownDag / unknownTransform）と、シーンに残っている未ロードプラグイン参照を検出します。", "has_fix": true,  "version": "1.1.0"},
+  {"folder": "autoNode",       "category": "シーン系",      "title": "Auto-generated Node",  "description": "Node Editor・Hypershade のタブ情報（SavedTabsInfo 系）や Maya USD プラグインのレイヤーマネージャーなど、Maya が自動生成する不要ノードを検出します。シーン全体が常に対象。", "has_fix": true,  "version": "1.0.0"},
   {"folder": "namespace",      "category": "シーン系",      "title": "Namespace",            "description": "デフォルト（UI / shared / :）以外の namespace を検出します。FIX で root に merge して削除します（リファレンス由来は除く）。",   "has_fix": true,  "version": "1.2.0"},
   {"folder": "scriptNode",     "category": "シーン系",      "title": "Script Node / Expression", "description": "scriptNode と expression を検出します。Open/Close 系 scriptNode はファイル開閉時に実行されるため、内容を確認の上で手動削除を推奨。", "has_fix": false, "version": "1.2.0"}
 ]
