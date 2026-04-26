@@ -385,3 +385,31 @@ class CategoryHeader(QtWidgets.QWidget):
             self._badge_lbl.setVisible(True)
         else:
             self._badge_lbl.setVisible(False)
+
+
+# ============================================================
+# 省略対応ラベル（幅超過時に末尾を "..." に置換）
+# ============================================================
+class ElidedLabel(QtWidgets.QLabel):
+    """幅に収まらないテキストを末尾 '...' で省略する QLabel。
+    setSizePolicy を Ignored にしているため親レイアウトを押し広げない。"""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._full_text = self.text()
+        self.setSizePolicy(QtWidgets.QSizePolicy.Ignored, QtWidgets.QSizePolicy.Preferred)
+        self.setMinimumWidth(0)
+
+    def setText(self, text):
+        self._full_text = text
+        self._apply_elide()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._apply_elide()
+
+    def _apply_elide(self):
+        elided = self.fontMetrics().elidedText(
+            self._full_text, QtCore.Qt.ElideRight, max(self.width(), 1)
+        )
+        super().setText(elided)

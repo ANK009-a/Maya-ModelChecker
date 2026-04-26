@@ -20,7 +20,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.8.0"
+LAUNCHER_VERSION    = "1.9.0"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -247,7 +247,7 @@ class assetChecker(QtWidgets.QDialog):
 
         obj_title_main = QtWidgets.QLabel("Objects")
         obj_title_main.setStyleSheet(_styles.SS_PANEL_TITLE_MAIN)
-        self.object_list_title_sub = QtWidgets.QLabel("")
+        self.object_list_title_sub = _widgets.ElidedLabel("")
         self.object_list_title_sub.setStyleSheet(_styles.SS_PANEL_TITLE_SUB)
         self.object_list_title_sub.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
 
