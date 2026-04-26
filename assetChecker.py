@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import re
+import html
+import random
 import urllib.request
 import types
 import sys
@@ -18,7 +20,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.7.0"
+LAUNCHER_VERSION    = "1.8.0"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -686,38 +688,110 @@ class assetChecker(QtWidgets.QDialog):
         if self._all_check_index >= len(self.folders):
             self._finish_all_check()
             return
-        folder = self.folders[self._all_check_index]
-        title  = self._folder_titles.get(folder, folder)
-        total  = len(self.folders)
+        folder  = self.folders[self._all_check_index]
+        title   = self._folder_titles.get(folder, folder)
+        total   = len(self.folders)
         current = self._all_check_index + 1
 
-        # 進捗を可視化（実行直前に表示更新）
         header_label = "CHECK" if self._all_check_selection else "ALL CHECK"
         self._set_object_list_title(f"{header_label} [{current}/{total}]")
-        lines = [f"{header_label} 実行中...  [{current}/{total}]", ""]
-        for status, f in self._all_check_summary:
-            mark = "✓" if status == "OK" else "✗"
-            lines.append(f"  {mark}  {self._folder_titles.get(f, f)}")
-        lines.append(f"  →  {title}")
-        self.detail_view.setPlainText("\n".join(lines))
-        QtWidgets.QApplication.processEvents()
+        self._animate_tool_scan(header_label, current, total, title)
 
         self._all_check_index += 1
         has_issue = self.run_check(folder, show_details=False, selection=self._all_check_selection)
         self._all_check_summary.append(("ERROR" if has_issue else "OK", folder))
         QtCore.QTimer.singleShot(0, self._step_all_check)
 
+    def _animate_tool_scan(self, header_label, current, total, title):
+        """ツール名がランダム文字から確定していくスクランブルアニメーション"""
+        _chars = "0123456789ABCDEF><|_-:?!#$%"
+
+        def _build_html(scan_line):
+            parts = [
+                f"<div style='font-family:Consolas,monospace; font-size:11px;"
+                f" color:#3ecfbe; margin-bottom:6px;'>"
+                f"{html.escape(header_label)}  [{current}/{total}]</div>",
+                "<div style='font-family:Consolas,monospace; font-size:10px;"
+                " color:#1a3050; margin-bottom:4px;'>────────────────────────────</div>",
+            ]
+            for status, f in self._all_check_summary:
+                color = "#28c880" if status == "OK" else "#e05858"
+                mark  = "✓" if status == "OK" else "✗"
+                t     = self._folder_titles.get(f, f)
+                cnt   = self._folder_counts.get(f, 0)
+                badge = (
+                    f"  <span style='color:#e05858;'>[{cnt}件]</span>"
+                    if status == "ERROR" else ""
+                )
+                parts.append(
+                    f"<div style='font-family:Consolas,monospace; font-size:11px;"
+                    f" color:{color};'>{mark}  {html.escape(t)}{badge}</div>"
+                )
+            parts.append(
+                f"<div style='font-family:Consolas,monospace; font-size:11px;"
+                f" color:#88b8f0; margin-top:3px;'>▶  {html.escape(scan_line)}</div>"
+            )
+            return "".join(parts)
+
+        frames = 5
+        for frame in range(frames):
+            ratio   = frame / frames
+            n_fixed = int(len(title) * ratio)
+            noise   = title[:n_fixed] + "".join(
+                " " if c == " " else random.choice(_chars)
+                for c in title[n_fixed:]
+            )
+            self.detail_view.setHtml(_build_html(noise + "█"))
+            QtWidgets.QApplication.processEvents()
+            QtCore.QThread.msleep(35)
+
+        self.detail_view.setHtml(_build_html(title + "..."))
+        QtWidgets.QApplication.processEvents()
+
     def _finish_all_check(self):
         self._all_check_running = False
         self._set_busy(False)
         header_label = "CHECK" if self._all_check_selection else "ALL CHECK"
-        header = f"{header_label} 結果"
-        lines = [header, ""]
+
+        n_err = sum(1 for s, _ in self._all_check_summary if s == "ERROR")
+        n_ok  = sum(1 for s, _ in self._all_check_summary if s == "OK")
+
+        # オブジェクトリスト用プレーンテキスト
+        lines = [f"{header_label} 結果", ""]
         for status, folder in self._all_check_summary:
             lines.append(f"  {status} : {folder}")
         self.set_object_results({"ALL_CHECK": lines})
         self._set_object_list_title(header_label)
-        self.detail_view.setPlainText("\n".join(lines))
+
+        # 完了後の詳細ビュー：スタイル付き HTML で上書き
+        parts = [
+            f"<div style='font-family:Consolas,monospace; font-size:11px;"
+            f" color:#3ecfbe; margin-bottom:6px;'>{html.escape(header_label)} COMPLETE</div>",
+            "<div style='font-family:Consolas,monospace; font-size:10px;"
+            " color:#1a3050; margin-bottom:4px;'>────────────────────────────</div>",
+        ]
+        for status, folder in self._all_check_summary:
+            color = "#28c880" if status == "OK" else "#e05858"
+            mark  = "✓" if status == "OK" else "✗"
+            t     = self._folder_titles.get(folder, folder)
+            cnt   = self._folder_counts.get(folder, 0)
+            badge = (
+                f"  <span style='color:#e05858;'>[{cnt}件]</span>"
+                if status == "ERROR" else ""
+            )
+            parts.append(
+                f"<div style='font-family:Consolas,monospace; font-size:11px;"
+                f" color:{color};'>{mark}  {html.escape(t)}{badge}</div>"
+            )
+        err_color = "#e05858" if n_err > 0 else "#1a3050"
+        parts += [
+            "<div style='font-family:Consolas,monospace; font-size:10px;"
+            " color:#1a3050; margin:6px 0 4px;'>────────────────────────────</div>",
+            f"<div style='font-family:Consolas,monospace; font-size:11px;'>"
+            f"<span style='color:{err_color};'>✗ {n_err}件エラー</span>"
+            f"  <span style='color:#28c880;'>✓ {n_ok}件 OK</span></div>",
+        ]
+        self.detail_view.setHtml("".join(parts))
 
     # ----------------------------------------------------------
     # ビジー状態の一括制御
