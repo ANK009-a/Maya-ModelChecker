@@ -694,7 +694,6 @@ class assetChecker(QtWidgets.QDialog):
         current = self._all_check_index + 1
 
         header_label = "CHECK" if self._all_check_selection else "ALL CHECK"
-        self._set_object_list_title(f"{header_label} [{current}/{total}]")
         self._animate_tool_scan(header_label, current, total, title)
 
         self._all_check_index += 1
