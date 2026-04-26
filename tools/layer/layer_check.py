@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-displayLayer_check.py
+layer_check.py
 
 check処理:
-defaultLayer / defaultRenderLayer 以外の displayLayer・renderLayer を検出します。
-
-対象（シーン全体・選択に関係なく常に全件）:
-- displayLayer: defaultLayer を除く
-- renderLayer:  defaultRenderLayer を除く（レガシー render layer）
+- animLayer ノード（BaseAnimation 含む）
+- defaultLayer / defaultRenderLayer 以外の displayLayer・renderLayer
+を検出します。対象はシーン全体（選択に関係なく常に全件）。
 """
 import maya.cmds as cmds
 from _results import CheckResult, Severity
 
 
 _DEFAULT_DISPLAY = "defaultLayer"
-_DEFAULT_RENDER = "defaultRenderLayer"
+_DEFAULT_RENDER  = "defaultRenderLayer"
 
 
 def _layers(node_type, default_name):
@@ -32,6 +30,17 @@ def _is_locked(node):
 
 def get_results():
     results = []
+
+    for n in sorted(cmds.ls(type="animLayer") or []):
+        details = ["Type: animLayer"]
+        if n == "BaseAnimation":
+            details.append("⚠ BaseAnimation を削除すると配下の animLayer も全削除されます")
+        results.append(CheckResult(
+            target=n,
+            message=f"animLayer: {n}",
+            details=details,
+            severity=Severity.ERROR,
+        ))
 
     for n in sorted(_layers("displayLayer", _DEFAULT_DISPLAY)):
         members = cmds.editDisplayLayerMembers(n, query=True, fullNames=True) or []
@@ -71,8 +80,8 @@ def get_results():
 if __name__ == "__main__":
     res = get_results()
     if not res:
-        print("[displayLayer] 該当ノードは見つかりませんでした。")
+        print("[layer] 該当ノードは見つかりませんでした。")
     else:
-        print(f"[displayLayer] {len(res)} 件")
+        print(f"[layer] {len(res)} 件")
         for r in res:
             print(r.message)
