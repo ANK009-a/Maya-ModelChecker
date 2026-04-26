@@ -1,22 +1,31 @@
 # -*- coding: utf-8 -*-
 """
-pivot_check_allScene_shortName_nodup.py
+pivot_check.py
 
-- 選択判定なし：常にシーン内の mesh shape を全件対象
 - mesh の親 transform の rotatePivot / scalePivot がワールド原点(0,0,0)からズレているものを返す
-- 一覧（中央）は transform 短名に統一
-- ★assetChecker側で message が details に混ざるため、details を付けず重複表示を防止
+- ただしピボットがメッシュの bounding box 内にある場合はスキップ（目など意図的なケース）
+- 常にシーン内の mesh shape を全件対象
 """
 
 import maya.cmds as cmds
 from _util import iter_unique_mesh_parents as _iter_unique_mesh_parents
 from _results import CheckResult, Severity
 
-TOLERANCE = 1e-6  # 許容誤差（必要なら 1e-4 などに）
+TOLERANCE = 1e-6
+BBOX_PAD  = 1e-4  # bbox 境界の許容マージン
 
 
 def _is_not_origin(pos, tol=TOLERANCE):
     return (abs(pos[0]) > tol) or (abs(pos[1]) > tol) or (abs(pos[2]) > tol)
+
+
+def _is_inside_bbox(pos, bbox):
+    xmin, ymin, zmin, xmax, ymax, zmax = bbox
+    return (
+        xmin - BBOX_PAD <= pos[0] <= xmax + BBOX_PAD and
+        ymin - BBOX_PAD <= pos[1] <= ymax + BBOX_PAD and
+        zmin - BBOX_PAD <= pos[2] <= zmax + BBOX_PAD
+    )
 
 
 def get_results():
@@ -28,11 +37,21 @@ def get_results():
 
     for tr in transforms:
         try:
-            rp = cmds.xform(tr, q=True, ws=True, rp=True)  # [x, y, z]
+            rp = cmds.xform(tr, q=True, ws=True, rp=True)
             sp = cmds.xform(tr, q=True, ws=True, sp=True)
 
             bad_rp = _is_not_origin(rp)
             bad_sp = _is_not_origin(sp)
+
+            if not (bad_rp or bad_sp):
+                continue
+
+            # ピボットが bbox 内なら意図的とみなしてスキップ
+            bbox = cmds.exactWorldBoundingBox(tr)
+            if bad_rp and _is_inside_bbox(rp, bbox):
+                bad_rp = False
+            if bad_sp and _is_inside_bbox(sp, bbox):
+                bad_sp = False
 
             if not (bad_rp or bad_sp):
                 continue
@@ -46,7 +65,6 @@ def get_results():
             results.append(CheckResult(
                 target=tr,
                 message=" / ".join(msg_parts),
-                # details は付けない（重複表示防止）
                 severity=Severity.ERROR,
             ))
 

@@ -62,8 +62,8 @@ def get_results():
     for n in sorted(_layers("renderLayer", _DEFAULT_RENDER)):
         details = [
             "Type: renderLayer (legacy)",
-            "⚠ FIX 対象外（Render Setup と整合しないため手動削除推奨）",
-            "  Maya の Render Setup ウィンドウから削除してください",
+            "⚠ FIX 対象外（renderSetup が参照を持つため直接削除するとエラーになります）",
+            "  Render Setup ウィンドウ（Windows > Rendering Editors > Render Setup）から削除してください",
         ]
         if _is_locked(n):
             details.append("⚠ lockNode で保護されています")

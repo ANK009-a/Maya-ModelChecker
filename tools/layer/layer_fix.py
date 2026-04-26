@@ -6,7 +6,8 @@ layer_fix.py
 - animLayer: そのまま削除。BaseAnimation 削除で配下も連鎖削除されるため、
   既に存在しないノードはスキップ。
 - displayLayer: ロックされている場合は解除してから削除。defaultLayer はスキップ。
-- renderLayer: FIX 対象外（Render Setup との整合性が取れないため手動削除推奨）。
+- renderLayer: FIX 対象外。renderSetup が renderLayer への参照を持つため
+  cmds.delete で直接削除するとエラーになる。Render Setup ウィンドウから削除すること。
 
 assetChecker から呼ばれる際は _run_fix() が事前にチェック結果のノードを選択しているため、
 ここでは current selection をそのまま削除対象として扱う。
@@ -45,7 +46,7 @@ def get_results():
         if t == "renderLayer":
             results.append({
                 "transform": n,
-                "message": f"スキップ: {n} は renderLayer のため FIX 対象外（Render Setup ウィンドウから手動削除してください）",
+                "message": f"スキップ: {n} は renderLayer のため FIX 対象外（Render Setup ウィンドウから削除してください）",
             })
             continue
 
