@@ -731,7 +731,7 @@ class assetChecker(QtWidgets.QDialog):
             )
             return "".join(parts)
 
-        frames = 1
+        frames = 2
         for frame in range(frames):
             ratio   = frame / frames
             n_fixed = int(len(title) * ratio)
@@ -741,7 +741,7 @@ class assetChecker(QtWidgets.QDialog):
             )
             self.detail_view.setHtml(_build_html(noise + "█"))
             QtWidgets.QApplication.processEvents()
-            QtCore.QThread.msleep(4)
+            QtCore.QThread.msleep(7)
 
         self.detail_view.setHtml(_build_html(title + "..."))
         QtWidgets.QApplication.processEvents()
