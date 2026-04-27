@@ -691,66 +691,60 @@ class assetChecker(QtWidgets.QDialog):
         title   = self._folder_titles.get(folder, folder)
         total   = len(self.folders)
         current = self._all_check_index + 1
-        header_label = "CHECK" if self._all_check_selection else "ALL CHECK"
 
-        # チェック前: ツール名を全スクランブル状態で即表示
-        _chars = "0123456789ABCDEF><|_-:?!#$%"
-        noise = "".join(" " if c == " " else random.choice(_chars) for c in title)
-        self.detail_view.setHtml(self._build_scan_html(header_label, current, total, noise + "█"))
-        QtWidgets.QApplication.processEvents()
+        header_label = "CHECK" if self._all_check_selection else "ALL CHECK"
+        self._animate_tool_scan(header_label, current, total, title)
 
         self._all_check_index += 1
         has_issue = self.run_check(folder, show_details=False, selection=self._all_check_selection)
-
-        # チェック完了 → スクランブルを解除するアニメーション
-        self._animate_tool_scan(header_label, current, total, title)
-
         self._all_check_summary.append(("ERROR" if has_issue else "OK", folder))
         QtCore.QTimer.singleShot(0, self._step_all_check)
 
-    def _build_scan_html(self, header_label, current, total, scan_line):
-        """スキャン進捗 HTML を組み立てる（_all_check_summary の現在状態を使う）"""
-        parts = [
-            f"<div style='font-family:Consolas,monospace; font-size:11px;"
-            f" color:#3ecfbe; margin-bottom:6px;'>"
-            f"{html.escape(header_label)}  [{current}/{total}]</div>",
-            "<div style='font-family:Consolas,monospace; font-size:10px;"
-            " color:#1a3050; margin-bottom:4px;'>────────────────────────────</div>",
-        ]
-        for status, f in self._all_check_summary:
-            color = "#28c880" if status == "OK" else "#e05858"
-            mark  = "✓" if status == "OK" else "✗"
-            t     = self._folder_titles.get(f, f)
-            cnt   = self._folder_counts.get(f, 0)
-            badge = (
-                f"  <span style='color:#e05858;'>[{cnt}件]</span>"
-                if status == "ERROR" else ""
-            )
+    def _animate_tool_scan(self, header_label, current, total, title):
+        """ツール名がランダム文字から確定していくスクランブルアニメーション"""
+        _chars = "0123456789ABCDEF><|_-:?!#$%"
+
+        def _build_html(scan_line):
+            parts = [
+                f"<div style='font-family:Consolas,monospace; font-size:11px;"
+                f" color:#3ecfbe; margin-bottom:6px;'>"
+                f"{html.escape(header_label)}  [{current}/{total}]</div>",
+                "<div style='font-family:Consolas,monospace; font-size:10px;"
+                " color:#1a3050; margin-bottom:4px;'>────────────────────────────</div>",
+            ]
+            for status, f in self._all_check_summary:
+                color = "#28c880" if status == "OK" else "#e05858"
+                mark  = "✓" if status == "OK" else "✗"
+                t     = self._folder_titles.get(f, f)
+                cnt   = self._folder_counts.get(f, 0)
+                badge = (
+                    f"  <span style='color:#e05858;'>[{cnt}件]</span>"
+                    if status == "ERROR" else ""
+                )
+                parts.append(
+                    f"<div style='font-family:Consolas,monospace; font-size:11px;"
+                    f" color:{color};'>{mark}  {html.escape(t)}{badge}</div>"
+                )
             parts.append(
                 f"<div style='font-family:Consolas,monospace; font-size:11px;"
-                f" color:{color};'>{mark}  {html.escape(t)}{badge}</div>"
+                f" color:#88b8f0; margin-top:3px;'>▶  {html.escape(scan_line)}</div>"
             )
-        parts.append(
-            f"<div style='font-family:Consolas,monospace; font-size:11px;"
-            f" color:#88b8f0; margin-top:3px;'>▶  {html.escape(scan_line)}</div>"
-        )
-        return "".join(parts)
+            return "".join(parts)
 
-    def _animate_tool_scan(self, header_label, current, total, title):
-        """チェック完了後、スクランブルが解除されていくアニメーション"""
-        _chars = "0123456789ABCDEF><|_-:?!#$%"
         frames = 5
         for frame in range(frames):
-            ratio   = (frame + 1) / frames
+            ratio   = frame / frames
             n_fixed = int(len(title) * ratio)
             noise   = title[:n_fixed] + "".join(
                 " " if c == " " else random.choice(_chars)
                 for c in title[n_fixed:]
             )
-            suffix = "█" if frame < frames - 1 else "..."
-            self.detail_view.setHtml(self._build_scan_html(header_label, current, total, noise + suffix))
+            self.detail_view.setHtml(_build_html(noise + "█"))
             QtWidgets.QApplication.processEvents()
             QtCore.QThread.msleep(35)
+
+        self.detail_view.setHtml(_build_html(title + "..."))
+        QtWidgets.QApplication.processEvents()
 
     def _finish_all_check(self):
         self._all_check_running = False
