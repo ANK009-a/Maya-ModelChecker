@@ -21,7 +21,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.13.4"
+LAUNCHER_VERSION    = "1.14.0"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -99,6 +99,41 @@ _loader.configure(GITHUB_RAW)
 
 
 # ============================================================
+# 入力ブロック用イベントフィルタ
+#   ALL CHECK / CHECK 実行中、assetChecker ダイアログ以外の入力を全部吸収する
+#   （Maya のシーン操作を防いで cmds スレッド衝突を回避）
+# ============================================================
+class _MayaInputBlocker(QtCore.QObject):
+    _BLOCKED = (
+        QtCore.QEvent.MouseButtonPress,
+        QtCore.QEvent.MouseButtonRelease,
+        QtCore.QEvent.MouseButtonDblClick,
+        QtCore.QEvent.KeyPress,
+        QtCore.QEvent.KeyRelease,
+        QtCore.QEvent.Wheel,
+        QtCore.QEvent.ShortcutOverride,
+    )
+
+    def __init__(self, allow_widget):
+        super().__init__(allow_widget)
+        self._allow = allow_widget
+
+    def eventFilter(self, obj, event):
+        if event.type() not in self._BLOCKED:
+            return False
+        # obj が allow_widget またはその子孫なら通す、それ以外はブロック
+        target = obj
+        while target is not None:
+            if target is self._allow:
+                return False
+            try:
+                target = target.parent()
+            except Exception:
+                break
+        return True
+
+
+# ============================================================
 # UI クラス
 # ============================================================
 class assetChecker(QtWidgets.QDialog):
@@ -141,6 +176,8 @@ class assetChecker(QtWidgets.QDialog):
         self._all_check_index     = 0
         self._all_check_summary   = []
         self._all_check_selection = []   # [] = 全体, [...] = 選択範囲
+        self._cancel_requested    = False
+        self._input_blocker       = None
 
         self._build_ui()
         self._load_folders()
@@ -654,6 +691,39 @@ class assetChecker(QtWidgets.QDialog):
         QtCore.QTimer.singleShot(0, lambda: self.run_check(folder, show_details=True))
 
     # ----------------------------------------------------------
+    # 入力ブロック / キャンセル
+    # ----------------------------------------------------------
+    def _install_input_block(self):
+        if self._input_blocker is None:
+            self._input_blocker = _MayaInputBlocker(self)
+        try:
+            QtWidgets.QApplication.instance().installEventFilter(self._input_blocker)
+        except Exception:
+            pass
+
+    def _remove_input_block(self):
+        if self._input_blocker is not None:
+            try:
+                QtWidgets.QApplication.instance().removeEventFilter(self._input_blocker)
+            except Exception:
+                pass
+
+    def keyPressEvent(self, event):
+        # 実行中の ESC はキャンセル要求として吸収（ダイアログを閉じない）
+        if event.key() == QtCore.Qt.Key_Escape and self._all_check_running:
+            if not self._cancel_requested:
+                self._cancel_requested = True
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    def closeEvent(self, event):
+        # ダイアログ消滅時は確実にブロック解除（ALL CHECK 中なら停止フラグも立てる）
+        self._cancel_requested = True
+        self._remove_input_block()
+        super().closeEvent(event)
+
+    # ----------------------------------------------------------
     # ALL CHECK / CHECK
     # ----------------------------------------------------------
     def start_check(self):
@@ -668,7 +738,9 @@ class assetChecker(QtWidgets.QDialog):
         self._all_check_index     = 0
         self._all_check_summary   = []
         self._all_check_selection = sel
+        self._cancel_requested    = False
         self._set_busy(True)
+        self._install_input_block()
         self._set_object_list_title("CHECK")
         self.set_object_results({})
         self.detail_view.setPlainText("CHECK 実行中...")
@@ -681,14 +753,19 @@ class assetChecker(QtWidgets.QDialog):
         self._all_check_index     = 0
         self._all_check_summary   = []
         self._all_check_selection = []   # 空リスト = シーン全体
+        self._cancel_requested    = False
         self._set_busy(True)
+        self._install_input_block()
         self._set_object_list_title("ALL CHECK")
         self.set_object_results({})
         self.detail_view.setPlainText("ALL CHECK 実行中...")
         QtCore.QTimer.singleShot(0, self._step_all_check)
 
     def _step_all_check(self):
-        if self._all_check_index >= len(self.folders):
+        # ダイアログ消滅後に singleShot が遅れて発火した場合は何もしない
+        if not self.isVisible():
+            return
+        if self._cancel_requested or self._all_check_index >= len(self.folders):
             self._finish_all_check()
             return
         folder  = self.folders[self._all_check_index]
@@ -799,10 +876,13 @@ class assetChecker(QtWidgets.QDialog):
         """チェック完了まで実行中の cmds（無ければツール名）を表示しつつ UI を生かす"""
 
         def _build_html(scan_line):
+            hint = "  キャンセル中..." if self._cancel_requested else "  (ESC でキャンセル)"
             parts = [
                 f"<div style='font-family:Consolas,monospace; font-size:11px;"
                 f" color:#3ecfbe; margin-bottom:6px;'>"
-                f"{html.escape(header_label)}  [{current}/{total}]</div>",
+                f"{html.escape(header_label)}  [{current}/{total}]"
+                f"<span style='color:#88b8f0; font-size:10px;'>{html.escape(hint)}</span>"
+                f"</div>",
                 "<div style='font-family:Consolas,monospace; font-size:10px;"
                 " color:#1a3050; margin-bottom:4px;'>────────────────────────────</div>",
             ]
@@ -839,8 +919,15 @@ class assetChecker(QtWidgets.QDialog):
 
     def _finish_all_check(self):
         self._all_check_running = False
+        self._remove_input_block()
+        cancelled = self._cancel_requested
+        self._cancel_requested = False
         self._set_busy(False)
+        if not self.isVisible():
+            return
         header_label = "CHECK" if self._all_check_selection else "ALL CHECK"
+        if cancelled:
+            header_label += " (CANCELLED)"
 
         n_err = sum(1 for s, _ in self._all_check_summary if s == "ERROR")
         n_ok  = sum(1 for s, _ in self._all_check_summary if s == "OK")
