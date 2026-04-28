@@ -2,6 +2,7 @@
 import re
 import html
 import random
+import threading
 import urllib.request
 import types
 import sys
@@ -20,7 +21,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.9.0"
+LAUNCHER_VERSION    = "1.10.0"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -590,7 +591,10 @@ class assetChecker(QtWidgets.QDialog):
     # ----------------------------------------------------------
     def run_check(self, folder, show_details=True, selection=None):
         structured, text = _loader.load_and_run(folder, f"{folder}_check.py", selection=selection)
+        return self._apply_check_result(folder, structured, text, show_details)
 
+    def _apply_check_result(self, folder, structured, text, show_details):
+        """check 結果（structured, text）を UI に反映する。メインスレッドから呼ぶこと。"""
         if structured is not None:
             obj_to_details = _formatter.normalize_structured(structured)
             has_issue = bool(obj_to_details)
@@ -691,17 +695,53 @@ class assetChecker(QtWidgets.QDialog):
         title   = self._folder_titles.get(folder, folder)
         total   = len(self.folders)
         current = self._all_check_index + 1
-
         header_label = "CHECK" if self._all_check_selection else "ALL CHECK"
-        self._animate_tool_scan(header_label, current, total, title)
+
+        # チェック結果と完了フラグを共有する箱
+        result_holder = {
+            "structured": None,
+            "text": "",
+            "done": False,
+            "error": None,
+        }
+
+        def _run_check_in_thread():
+            try:
+                structured, text = _loader.load_and_run(
+                    folder, f"{folder}_check.py", selection=self._all_check_selection
+                )
+                result_holder["structured"] = structured
+                result_holder["text"] = text
+            except Exception as e:
+                result_holder["error"] = e
+            finally:
+                result_holder["done"] = True
 
         self._all_check_index += 1
-        has_issue = self.run_check(folder, show_details=False, selection=self._all_check_selection)
+        thread = threading.Thread(target=_run_check_in_thread, daemon=True)
+        thread.start()
+
+        # メインスレッド: チェックが終わるまでスクランブルを回す
+        self._animate_until_done(header_label, current, total, title, result_holder)
+        thread.join()
+
+        # メインスレッドで UI 反映
+        if result_holder["error"] is not None:
+            print(f"[assetChecker] {folder} check failed: {result_holder['error']}")
+            has_issue = False
+        else:
+            has_issue = self._apply_check_result(
+                folder,
+                result_holder["structured"],
+                result_holder["text"],
+                show_details=False,
+            )
+
         self._all_check_summary.append(("ERROR" if has_issue else "OK", folder))
         QtCore.QTimer.singleShot(0, self._step_all_check)
 
-    def _animate_tool_scan(self, header_label, current, total, title):
-        """ツール名がランダム文字から確定していくスクランブルアニメーション"""
+    def _animate_until_done(self, header_label, current, total, title, result_holder):
+        """result_holder['done'] が True になるまでスクランブルを回し続ける"""
         _chars = "0123456789ABCDEF><|_-:?!#$%"
 
         def _build_html(scan_line):
@@ -731,18 +771,17 @@ class assetChecker(QtWidgets.QDialog):
             )
             return "".join(parts)
 
-        frames = 2
-        for frame in range(frames):
-            ratio   = frame / frames
-            n_fixed = int(len(title) * ratio)
-            noise   = title[:n_fixed] + "".join(
+        # チェック完了までフルスクランブルを回し続ける
+        while not result_holder["done"]:
+            noise = "".join(
                 " " if c == " " else random.choice(_chars)
-                for c in title[n_fixed:]
+                for c in title
             )
             self.detail_view.setHtml(_build_html(noise + "█"))
             QtWidgets.QApplication.processEvents()
-            QtCore.QThread.msleep(7)
+            QtCore.QThread.msleep(35)
 
+        # 完了 → 確定状態を即表示
         self.detail_view.setHtml(_build_html(title + "..."))
         QtWidgets.QApplication.processEvents()
 
