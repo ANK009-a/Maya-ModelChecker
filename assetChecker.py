@@ -21,7 +21,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.14.0"
+LAUNCHER_VERSION    = "1.14.1"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -119,7 +119,13 @@ class _MayaInputBlocker(QtCore.QObject):
         self._allow = allow_widget
 
     def eventFilter(self, obj, event):
-        if event.type() not in self._BLOCKED:
+        et = event.type()
+        # ESC はフォーカス位置によらず確実に拾うため、フィルタ層で直接キャンセル要求にする
+        if et == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Escape:
+            if getattr(self._allow, "_all_check_running", False):
+                self._allow._cancel_requested = True
+                return True   # ESC を消費してこれ以上伝播させない
+        if et not in self._BLOCKED:
             return False
         # obj が allow_widget またはその子孫なら通す、それ以外はブロック
         target = obj
