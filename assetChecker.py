@@ -21,7 +21,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.16.0"
+LAUNCHER_VERSION    = "1.16.1"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -356,7 +356,8 @@ class assetChecker(QtWidgets.QDialog):
         status.setStyleSheet(_styles.SS_STATUS_BAR)
         status.setFixedHeight(30)
         status_lay = QtWidgets.QHBoxLayout(status)
-        status_lay.setContentsMargins(16, 5, 16, 5)
+        # 上枠線(1px) と font の縦メトリクス分のオフセットを補正するため上下を非対称に
+        status_lay.setContentsMargins(16, 3, 16, 7)
         status_lay.setSpacing(20)
 
         _lbl_ss = "font-size: 11px; background: transparent;"
