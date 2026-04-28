@@ -21,7 +21,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.13.2"
+LAUNCHER_VERSION    = "1.13.3"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -716,29 +716,18 @@ class assetChecker(QtWidgets.QDialog):
                         now = time.monotonic()
                         if now - result_holder["last_format_time"] >= FORMAT_INTERVAL:
                             result_holder["last_format_time"] = now
-                            MAX_PIECE = 20
-                            MAX_TOTAL = 60
                             parts = []
                             for a in args:
                                 try:
-                                    s = repr(a)
+                                    parts.append(repr(a))
                                 except Exception:
-                                    s = "?"
-                                if len(s) > MAX_PIECE:
-                                    s = s[:MAX_PIECE - 3] + "..."
-                                parts.append(s)
+                                    parts.append("?")
                             for k, v in kwargs.items():
                                 try:
-                                    s = repr(v)
+                                    parts.append(f"{k}={repr(v)}")
                                 except Exception:
-                                    s = "?"
-                                if len(s) > MAX_PIECE:
-                                    s = s[:MAX_PIECE - 3] + "..."
-                                parts.append(f"{k}={s}")
-                            arg_str = ", ".join(parts)
-                            if len(arg_str) > MAX_TOTAL:
-                                arg_str = arg_str[:MAX_TOTAL - 3] + "..."
-                            result_holder["last_cmd"] = f"cmds.{name}({arg_str})"
+                                    parts.append(f"{k}=?")
+                            result_holder["last_cmd"] = f"cmds.{name}({', '.join(parts)})"
                 except Exception:
                     pass
                 return original(*args, **kwargs)
