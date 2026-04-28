@@ -21,7 +21,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.10.0"
+LAUNCHER_VERSION    = "1.11.0"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -703,15 +703,31 @@ class assetChecker(QtWidgets.QDialog):
             "text": "",
             "done": False,
             "error": None,
+            "last_cmd": None,   # 直近に呼ばれた cmds.* 関数名
         }
+
+        def _profile(frame, event, arg):
+            # ワーカースレッド限定で C 関数呼び出しを監視 → cmds.* なら名前を記録
+            if event == "c_call":
+                try:
+                    fn_name = getattr(arg, "__name__", None)
+                    if fn_name and getattr(cmds, fn_name, None) is arg:
+                        result_holder["last_cmd"] = fn_name
+                except Exception:
+                    pass
 
         def _run_check_in_thread():
             try:
-                structured, text = _loader.load_and_run(
-                    folder, f"{folder}_check.py", selection=self._all_check_selection
-                )
-                result_holder["structured"] = structured
-                result_holder["text"] = text
+                if cmds is not None:
+                    sys.setprofile(_profile)
+                try:
+                    structured, text = _loader.load_and_run(
+                        folder, f"{folder}_check.py", selection=self._all_check_selection
+                    )
+                    result_holder["structured"] = structured
+                    result_holder["text"] = text
+                finally:
+                    sys.setprofile(None)
             except Exception as e:
                 result_holder["error"] = e
             finally:
@@ -771,13 +787,17 @@ class assetChecker(QtWidgets.QDialog):
             )
             return "".join(parts)
 
-        # チェック完了までフルスクランブルを回し続ける
+        # チェック完了まで「実行中の cmds」を回し続ける（無ければスクランブル）
         while not result_holder["done"]:
-            noise = "".join(
-                " " if c == " " else random.choice(_chars)
-                for c in title
-            )
-            self.detail_view.setHtml(_build_html(noise + "█"))
+            last_cmd = result_holder.get("last_cmd")
+            if last_cmd:
+                display = f"cmds.{last_cmd}()"
+            else:
+                display = "".join(
+                    " " if c == " " else random.choice(_chars)
+                    for c in title
+                )
+            self.detail_view.setHtml(_build_html(display + "█"))
             QtWidgets.QApplication.processEvents()
             QtCore.QThread.msleep(35)
 
