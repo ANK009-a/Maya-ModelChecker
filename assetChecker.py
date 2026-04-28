@@ -21,7 +21,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.11.0"
+LAUNCHER_VERSION    = "1.12.0"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -706,20 +706,59 @@ class assetChecker(QtWidgets.QDialog):
             "last_cmd": None,   # 直近に呼ばれた cmds.* 関数名
         }
 
-        def _profile(frame, event, arg):
-            # ワーカースレッド限定で C 関数呼び出しを監視 → cmds.* なら名前を記録
-            if event == "c_call":
+        def _make_wrapper(name, original, worker_thread):
+            # cmds.{name} の呼び出しをワーカースレッド限定で記録するラッパ
+            def wrapper(*args, **kwargs):
                 try:
-                    fn_name = getattr(arg, "__name__", None)
-                    if fn_name and getattr(cmds, fn_name, None) is arg:
-                        result_holder["last_cmd"] = fn_name
+                    if threading.current_thread() is worker_thread:
+                        MAX_PIECE = 20
+                        MAX_TOTAL = 60
+                        parts = []
+                        for a in args:
+                            try:
+                                s = repr(a)
+                            except Exception:
+                                s = "?"
+                            if len(s) > MAX_PIECE:
+                                s = s[:MAX_PIECE - 3] + "..."
+                            parts.append(s)
+                        for k, v in kwargs.items():
+                            try:
+                                s = repr(v)
+                            except Exception:
+                                s = "?"
+                            if len(s) > MAX_PIECE:
+                                s = s[:MAX_PIECE - 3] + "..."
+                            parts.append(f"{k}={s}")
+                        arg_str = ", ".join(parts)
+                        if len(arg_str) > MAX_TOTAL:
+                            arg_str = arg_str[:MAX_TOTAL - 3] + "..."
+                        result_holder["last_cmd"] = f"cmds.{name}({arg_str})"
                 except Exception:
                     pass
+                return original(*args, **kwargs)
+            return wrapper
 
         def _run_check_in_thread():
+            worker_thread = threading.current_thread()
+            originals = {}
             try:
+                # cmds の callable 属性を一時的にラップ
                 if cmds is not None:
-                    sys.setprofile(_profile)
+                    for attr_name in dir(cmds):
+                        if attr_name.startswith("_"):
+                            continue
+                        try:
+                            attr = getattr(cmds, attr_name)
+                            if callable(attr):
+                                originals[attr_name] = attr
+                        except Exception:
+                            pass
+                    for n, orig in originals.items():
+                        try:
+                            setattr(cmds, n, _make_wrapper(n, orig, worker_thread))
+                        except Exception:
+                            pass
                 try:
                     structured, text = _loader.load_and_run(
                         folder, f"{folder}_check.py", selection=self._all_check_selection
@@ -727,7 +766,12 @@ class assetChecker(QtWidgets.QDialog):
                     result_holder["structured"] = structured
                     result_holder["text"] = text
                 finally:
-                    sys.setprofile(None)
+                    # cmds を元に戻す
+                    for n, orig in originals.items():
+                        try:
+                            setattr(cmds, n, orig)
+                        except Exception:
+                            pass
             except Exception as e:
                 result_holder["error"] = e
             finally:
@@ -791,7 +835,7 @@ class assetChecker(QtWidgets.QDialog):
         while not result_holder["done"]:
             last_cmd = result_holder.get("last_cmd")
             if last_cmd:
-                display = f"cmds.{last_cmd}()"
+                display = last_cmd
             else:
                 display = "".join(
                     " " if c == " " else random.choice(_chars)
