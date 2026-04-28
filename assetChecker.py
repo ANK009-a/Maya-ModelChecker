@@ -21,7 +21,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.14.1"
+LAUNCHER_VERSION    = "1.14.2"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -715,9 +715,10 @@ class assetChecker(QtWidgets.QDialog):
                 pass
 
     def keyPressEvent(self, event):
-        # 実行中の ESC はキャンセル要求として吸収（ダイアログを閉じない）
-        if event.key() == QtCore.Qt.Key_Escape and self._all_check_running:
-            if not self._cancel_requested:
+        # ESC は常に吸収する（QDialog の標準 reject() でダイアログが閉じるのを防ぐ）
+        # ALL CHECK 中ならキャンセル要求として記録、それ以外は無効キーとして握り潰す
+        if event.key() == QtCore.Qt.Key_Escape:
+            if self._all_check_running and not self._cancel_requested:
                 self._cancel_requested = True
             event.accept()
             return
