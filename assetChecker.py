@@ -21,7 +21,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.13.3"
+LAUNCHER_VERSION    = "1.13.4"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -716,15 +716,20 @@ class assetChecker(QtWidgets.QDialog):
                         now = time.monotonic()
                         if now - result_holder["last_format_time"] >= FORMAT_INTERVAL:
                             result_holder["last_format_time"] = now
+
+                            def _truncate(s):
+                                # 長すぎる引数は「先頭...末尾」形式で短縮
+                                return s if len(s) <= 40 else s[:15] + "..." + s[-22:]
+
                             parts = []
                             for a in args:
                                 try:
-                                    parts.append(repr(a))
+                                    parts.append(_truncate(repr(a)))
                                 except Exception:
                                     parts.append("?")
                             for k, v in kwargs.items():
                                 try:
-                                    parts.append(f"{k}={repr(v)}")
+                                    parts.append(f"{k}={_truncate(repr(v))}")
                                 except Exception:
                                     parts.append(f"{k}=?")
                             result_holder["last_cmd"] = f"cmds.{name}({', '.join(parts)})"
