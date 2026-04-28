@@ -21,7 +21,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.15.0"
+LAUNCHER_VERSION    = "1.16.0"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -150,6 +150,9 @@ class assetChecker(QtWidgets.QDialog):
         "(summary)", "(result)", "(none)", "(info)",
     })
 
+    # 起動時の先読みキャッシュ進捗（done, failed, total）
+    _prefetch_progress = QtCore.Signal(int, int, int)
+
     # ----------------------------------------------------------
     def __init__(self, parent=maya_main_window()):
         super().__init__(parent)
@@ -184,6 +187,8 @@ class assetChecker(QtWidgets.QDialog):
         self._all_check_selection = []   # [] = 全体, [...] = 選択範囲
         self._cancel_requested    = False
         self._input_blocker       = None
+
+        self._prefetch_progress.connect(self._on_prefetch_progress)
 
         self._build_ui()
         self._load_folders()
@@ -366,6 +371,12 @@ class assetChecker(QtWidgets.QDialog):
             status_lay.addWidget(lbl)
         status_lay.addStretch()
 
+        # キャッシュ状況ラベル（取得中はテキスト + アイコン、完了後はドットのみ）
+        self._cache_status_label = QtWidgets.QLabel("")
+        self._cache_status_label.setStyleSheet("background: transparent;")
+        self._cache_status_label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight)
+        status_lay.addWidget(self._cache_status_label)
+
         ver_lbl = QtWidgets.QLabel(f"v{LAUNCHER_VERSION}")
         ver_lbl.setStyleSheet("color: #263c58; font-size: 10px; background: transparent;")
         ver_lbl.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight)
@@ -463,13 +474,24 @@ class assetChecker(QtWidgets.QDialog):
             return
         folders = list(self.folders)
         has_fix = dict(self.has_fix_script)
+        total = len(folders)
+
+        # 初期状態を即時反映
+        self._prefetch_progress.emit(0, 0, total)
 
         def _do_prefetch():
+            done = 0
+            failed = 0
             for folder in folders:
                 try:
                     fetch(folder, f"{folder}_check.py")
                 except Exception:
-                    pass
+                    failed += 1
+                done += 1
+                # シグナル経由でメインスレッドの UI を更新
+                self._prefetch_progress.emit(done, failed, total)
+
+                # fix スクリプトは進捗カウント対象外（ベストエフォート）
                 if has_fix.get(folder, False):
                     try:
                         fetch(folder, f"{folder}_fix.py")
@@ -477,6 +499,33 @@ class assetChecker(QtWidgets.QDialog):
                         pass
 
         threading.Thread(target=_do_prefetch, daemon=True).start()
+
+    def _on_prefetch_progress(self, done, failed, total):
+        """キャッシュ取得進捗をステータスバーに反映"""
+        if not hasattr(self, "_cache_status_label"):
+            return
+        if done < total:
+            # 取得中：オレンジ系で進捗テキスト
+            self._cache_status_label.setStyleSheet(
+                "color: #e0b060; font-size: 10px; background: transparent;"
+            )
+            self._cache_status_label.setText(f"⟳ 取得中 {done}/{total}")
+        elif failed == 0:
+            # 完了：緑のドットだけ
+            self._cache_status_label.setStyleSheet(
+                "color: #28c880; font-size: 13px; background: transparent;"
+            )
+            self._cache_status_label.setText("●")
+            self._cache_status_label.setToolTip(f"Cache ready ({total} scripts)")
+        else:
+            # 取得失敗あり：赤＋件数
+            self._cache_status_label.setStyleSheet(
+                "color: #e05858; font-size: 10px; background: transparent;"
+            )
+            self._cache_status_label.setText(f"● {failed}件失敗")
+            self._cache_status_label.setToolTip(
+                f"Cache: {total - failed}/{total} loaded ({failed} failed)"
+            )
 
     # ----------------------------------------------------------
     # カテゴリ折り畳み / バッジ
