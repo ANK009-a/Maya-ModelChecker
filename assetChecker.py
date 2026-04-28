@@ -21,7 +21,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.14.2"
+LAUNCHER_VERSION    = "1.15.0"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -187,6 +187,7 @@ class assetChecker(QtWidgets.QDialog):
 
         self._build_ui()
         self._load_folders()
+        self._prefetch_scripts()
 
     # ----------------------------------------------------------
     # UI 構築
@@ -449,6 +450,33 @@ class assetChecker(QtWidgets.QDialog):
                 row.setVisible(False)
 
         self._update_status_bar()
+
+    # ----------------------------------------------------------
+    # 起動時の先読みキャッシュ
+    #   バックグラウンドで全 check / fix スクリプトを取得して
+    #   _loader._script_cache に乗せておく。初回 ALL CHECK のネットワーク
+    #   待ちを無くし、cmds 表示が最初から見えるようにする。
+    # ----------------------------------------------------------
+    def _prefetch_scripts(self):
+        fetch = getattr(_loader, "fetch_script", None)
+        if fetch is None or not self.folders:
+            return
+        folders = list(self.folders)
+        has_fix = dict(self.has_fix_script)
+
+        def _do_prefetch():
+            for folder in folders:
+                try:
+                    fetch(folder, f"{folder}_check.py")
+                except Exception:
+                    pass
+                if has_fix.get(folder, False):
+                    try:
+                        fetch(folder, f"{folder}_fix.py")
+                    except Exception:
+                        pass
+
+        threading.Thread(target=_do_prefetch, daemon=True).start()
 
     # ----------------------------------------------------------
     # カテゴリ折り畳み / バッジ
