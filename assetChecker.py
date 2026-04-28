@@ -3,6 +3,7 @@ import re
 import html
 import random
 import threading
+import time
 import urllib.request
 import types
 import sys
@@ -21,7 +22,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.12.0"
+LAUNCHER_VERSION    = "1.12.1"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -68,6 +69,30 @@ def _bootstrap_modules():
         mod = types.ModuleType(name)
         exec(compile(code, f"{name}.py", "exec"), mod.__dict__)
         sys.modules[name] = mod
+
+
+# ============================================================
+# cmds の callable 属性名キャッシュ
+#   毎回 dir(cmds) を回すと重いので一度だけ列挙して再利用する
+# ============================================================
+_cmds_callable_names_cache = None
+
+def _get_cmds_callable_names():
+    global _cmds_callable_names_cache
+    if _cmds_callable_names_cache is not None:
+        return _cmds_callable_names_cache
+    names = []
+    if cmds is not None:
+        for attr_name in dir(cmds):
+            if attr_name.startswith("_"):
+                continue
+            try:
+                if callable(getattr(cmds, attr_name)):
+                    names.append(attr_name)
+            except Exception:
+                pass
+    _cmds_callable_names_cache = names
+    return _cmds_callable_names_cache
 
 
 # ============================================================
@@ -703,37 +728,42 @@ class assetChecker(QtWidgets.QDialog):
             "text": "",
             "done": False,
             "error": None,
-            "last_cmd": None,   # 直近に呼ばれた cmds.* 関数名
+            "last_cmd": None,            # 直近に整形した cmds 呼び出し
+            "last_format_time": 0.0,     # 整形のスロットル管理
         }
+        FORMAT_INTERVAL = 0.030  # 30ms 以内の連続呼び出しは整形をスキップ
 
         def _make_wrapper(name, original, worker_thread):
             # cmds.{name} の呼び出しをワーカースレッド限定で記録するラッパ
             def wrapper(*args, **kwargs):
                 try:
                     if threading.current_thread() is worker_thread:
-                        MAX_PIECE = 20
-                        MAX_TOTAL = 60
-                        parts = []
-                        for a in args:
-                            try:
-                                s = repr(a)
-                            except Exception:
-                                s = "?"
-                            if len(s) > MAX_PIECE:
-                                s = s[:MAX_PIECE - 3] + "..."
-                            parts.append(s)
-                        for k, v in kwargs.items():
-                            try:
-                                s = repr(v)
-                            except Exception:
-                                s = "?"
-                            if len(s) > MAX_PIECE:
-                                s = s[:MAX_PIECE - 3] + "..."
-                            parts.append(f"{k}={s}")
-                        arg_str = ", ".join(parts)
-                        if len(arg_str) > MAX_TOTAL:
-                            arg_str = arg_str[:MAX_TOTAL - 3] + "..."
-                        result_holder["last_cmd"] = f"cmds.{name}({arg_str})"
+                        now = time.monotonic()
+                        if now - result_holder["last_format_time"] >= FORMAT_INTERVAL:
+                            result_holder["last_format_time"] = now
+                            MAX_PIECE = 20
+                            MAX_TOTAL = 60
+                            parts = []
+                            for a in args:
+                                try:
+                                    s = repr(a)
+                                except Exception:
+                                    s = "?"
+                                if len(s) > MAX_PIECE:
+                                    s = s[:MAX_PIECE - 3] + "..."
+                                parts.append(s)
+                            for k, v in kwargs.items():
+                                try:
+                                    s = repr(v)
+                                except Exception:
+                                    s = "?"
+                                if len(s) > MAX_PIECE:
+                                    s = s[:MAX_PIECE - 3] + "..."
+                                parts.append(f"{k}={s}")
+                            arg_str = ", ".join(parts)
+                            if len(arg_str) > MAX_TOTAL:
+                                arg_str = arg_str[:MAX_TOTAL - 3] + "..."
+                            result_holder["last_cmd"] = f"cmds.{name}({arg_str})"
                 except Exception:
                     pass
                 return original(*args, **kwargs)
@@ -743,20 +773,13 @@ class assetChecker(QtWidgets.QDialog):
             worker_thread = threading.current_thread()
             originals = {}
             try:
-                # cmds の callable 属性を一時的にラップ
+                # キャッシュされた callable 名を使って cmds を一時的にラップ
                 if cmds is not None:
-                    for attr_name in dir(cmds):
-                        if attr_name.startswith("_"):
-                            continue
+                    for attr_name in _get_cmds_callable_names():
                         try:
                             attr = getattr(cmds, attr_name)
-                            if callable(attr):
-                                originals[attr_name] = attr
-                        except Exception:
-                            pass
-                    for n, orig in originals.items():
-                        try:
-                            setattr(cmds, n, _make_wrapper(n, orig, worker_thread))
+                            originals[attr_name] = attr
+                            setattr(cmds, attr_name, _make_wrapper(attr_name, attr, worker_thread))
                         except Exception:
                             pass
                 try:
