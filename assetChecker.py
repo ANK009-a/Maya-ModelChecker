@@ -21,7 +21,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.13.1"
+LAUNCHER_VERSION    = "1.13.2"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -68,30 +68,6 @@ def _bootstrap_modules():
         mod = types.ModuleType(name)
         exec(compile(code, f"{name}.py", "exec"), mod.__dict__)
         sys.modules[name] = mod
-
-
-# ============================================================
-# cmds の callable 属性名キャッシュ
-#   毎回 dir(cmds) を回すと重いので一度だけ列挙して再利用する
-# ============================================================
-_cmds_callable_names_cache = None
-
-def _get_cmds_callable_names():
-    global _cmds_callable_names_cache
-    if _cmds_callable_names_cache is not None:
-        return _cmds_callable_names_cache
-    names = []
-    if cmds is not None:
-        for attr_name in dir(cmds):
-            if attr_name.startswith("_"):
-                continue
-            try:
-                if callable(getattr(cmds, attr_name)):
-                    names.append(attr_name)
-            except Exception:
-                pass
-    _cmds_callable_names_cache = names
-    return _cmds_callable_names_cache
 
 
 # ============================================================
@@ -772,13 +748,16 @@ class assetChecker(QtWidgets.QDialog):
             worker_thread = threading.current_thread()
             originals = {}
             try:
-                # キャッシュされた callable 名を使って cmds を一時的にラップ
+                # cmds の callable 属性を一時的にラップ
                 if cmds is not None:
-                    for attr_name in _get_cmds_callable_names():
+                    for attr_name in dir(cmds):
+                        if attr_name.startswith("_"):
+                            continue
                         try:
                             attr = getattr(cmds, attr_name)
-                            originals[attr_name] = attr
-                            setattr(cmds, attr_name, _make_wrapper(attr_name, attr, worker_thread))
+                            if callable(attr):
+                                originals[attr_name] = attr
+                                setattr(cmds, attr_name, _make_wrapper(attr_name, attr, worker_thread))
                         except Exception:
                             pass
                 try:
