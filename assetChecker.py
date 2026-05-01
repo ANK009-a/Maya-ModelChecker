@@ -21,7 +21,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.18.0"
+LAUNCHER_VERSION    = "1.19.0"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -190,11 +190,17 @@ class assetChecker(QtWidgets.QDialog):
         self._cancel_requested     = False
         self._input_blocker        = None
 
+        # Maya ↔ object_list 双方向選択同期
+        self._maya_selection_job          = None
+        self._syncing_selection           = False  # 同期処理中の再入防止
+        self._suppress_maya_selection_sync = False  # Qt → Maya 直後の Maya 側イベント抑制
+
         self._prefetch_progress.connect(self._on_prefetch_progress)
 
         self._build_ui()
         self._load_folders()
         self._prefetch_scripts()
+        self._install_maya_selection_job()
 
     # ----------------------------------------------------------
     # UI 構築
@@ -327,7 +333,7 @@ class assetChecker(QtWidgets.QDialog):
         self.object_list_title = obj_title_w
 
         self.object_list = QtWidgets.QListWidget()
-        self.object_list.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+        self.object_list.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.object_list.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.object_list.setStyleSheet(_styles.SS_OBJECT_LIST)
 
@@ -365,8 +371,7 @@ class assetChecker(QtWidgets.QDialog):
         right_lay.addWidget(list_container, 37)
         right_lay.addWidget(detail_container, 63)
 
-        self.object_list.currentItemChanged.connect(self.on_object_selected)
-        self.object_list.itemClicked.connect(self.on_object_clicked)
+        self.object_list.itemSelectionChanged.connect(self.on_object_selection_changed)
 
         body_lay.addWidget(right_w, 1)
         root.addWidget(body, 1)
@@ -611,65 +616,204 @@ class assetChecker(QtWidgets.QDialog):
         self._lbl_unchecked.setText(f"○  {n_unc}件 未チェック")
 
     # ----------------------------------------------------------
-    # Maya 選択ユーティリティ
+    # Maya 選択ユーティリティ（複数選択対応・双方向同期）
     # ----------------------------------------------------------
-    def _gather_select_targets(self, key, details):
+    def _selection_targets_for_node(self, node):
+        """ノードキー(transform/shape/コンポーネント) → Maya 選択対象 transform 列。
+        shape ならその親 transform を返す。同名衝突時は long path を全て返す。"""
         if not cmds:
             return []
-        candidates = []
-        if isinstance(key, str) and key:
-            candidates.append(key)
-        if details:
-            pattern = re.compile(
-                r'[\|]?[A-Za-z_][A-Za-z0-9_:\|]*?(?:\.[A-Za-z]+)?(?:\[[0-9:,\-]+\])?'
-            )
-            for line in details:
-                for tok in pattern.findall(str(line)):
-                    tok = tok.strip()
-                    if not tok or tok in ("stdout", "ALL_CHECK"):
-                        continue
-                    if cmds.objExists(tok):
-                        candidates.append(tok)
-                        continue
-                    base = tok.split(".", 1)[0] if "." in tok else tok
-                    if base and cmds.objExists(base):
-                        candidates.append(base)
-        seen = set()
-        uniq = []
-        for c in candidates:
-            if c not in seen:
-                seen.add(c)
-                uniq.append(c)
-        final = []
-        for c in uniq:
-            if cmds.objExists(c):
-                final.append(c)
-            elif "." in c:
-                base = c.split(".", 1)[0]
-                if base and cmds.objExists(base):
-                    final.append(base)
-        return final
+        base = str(node).split(".", 1)[0] if node else ""
+        if not base:
+            return []
 
-    def _apply_maya_selection_for_key(self, key, details):
-        if not cmds or key in self._SKIP_SELECT_KEYS:
-            return
+        paths = []
         try:
-            targets = self._gather_select_targets(str(key), details)
-            if targets:
-                cmds.select(targets, r=True)
+            paths.extend(cmds.ls(base, long=True) or [])
         except Exception:
             pass
+        if cmds.objExists(base):
+            paths.append(base)
+
+        seen = set()
+        result = []
+        for path in paths:
+            if path in seen or not cmds.objExists(path):
+                continue
+            seen.add(path)
+            try:
+                node_type = cmds.nodeType(path)
+            except Exception:
+                node_type = ""
+            if node_type == "transform":
+                if path not in result:
+                    result.append(path)
+                continue
+            try:
+                parents = cmds.listRelatives(path, parent=True, fullPath=True) or []
+            except Exception:
+                parents = []
+            target = parents[0] if parents else path
+            if target not in result:
+                result.append(target)
+        return result
+
+    def _apply_maya_selection_for_items(self, items):
+        """object_list で選択中のアイテム群を Maya 選択に反映"""
+        if not cmds or not items:
+            return
+        targets = []
+        seen = set()
+        for item in items:
+            key = item.data(QtCore.Qt.UserRole)
+            if not key or key in self._SKIP_SELECT_KEYS:
+                continue
+            for target in self._selection_targets_for_node(str(key)):
+                if target not in seen:
+                    seen.add(target)
+                    targets.append(target)
+        if not targets:
+            return
+        try:
+            cmds.select(clear=True)
+            for target in targets:
+                try:
+                    cmds.select(target, add=True)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def _matching_object_items_for_maya_selection(self, selection):
+        """Maya の選択ノード列 → 対応する object_list のアイテム列"""
+        selected_targets = set()
+        for node in selection:
+            selected_targets.update(self._selection_targets_for_node(node))
+        if not selected_targets:
+            return []
+
+        matches = []
+        for row in range(self.object_list.count()):
+            item = self.object_list.item(row)
+            key = item.data(QtCore.Qt.UserRole)
+            if not key or key in self._SKIP_SELECT_KEYS:
+                continue
+            if set(self._selection_targets_for_node(key)) & selected_targets:
+                matches.append(item)
+        return matches
+
+    def _set_object_items_selected_from_maya(self, items):
+        """Maya 由来の選択を object_list に反映する（重複除去・最初の項目を current に）"""
+        unique_items = []
+        seen_keys = set()
+        for item in sorted(items, key=lambda x: self.object_list.row(x)):
+            key = item.data(QtCore.Qt.UserRole)
+            if not key or key in seen_keys:
+                continue
+            seen_keys.add(key)
+            unique_items.append(item)
+
+        self._syncing_selection = True
+        try:
+            self.object_list.clearSelection()
+            model = self.object_list.selectionModel()
+            for item in unique_items:
+                index = self.object_list.indexFromItem(item)
+                if index.isValid():
+                    model.select(index, QtCore.QItemSelectionModel.Select)
+            if unique_items:
+                first_index = self.object_list.indexFromItem(unique_items[0])
+                if first_index.isValid():
+                    model.setCurrentIndex(first_index, QtCore.QItemSelectionModel.NoUpdate)
+        finally:
+            self._syncing_selection = False
+
+        self.object_list.viewport().update()
+        self.detail_view.clear()
+        details_html = self._format_selected_object_details(unique_items)
+        if details_html:
+            self.detail_view.setHtml(details_html)
+
+    def _install_maya_selection_job(self):
+        if not cmds or self._maya_selection_job is not None:
+            return
+        try:
+            self._maya_selection_job = cmds.scriptJob(
+                event=["SelectionChanged", self._on_maya_selection_changed]
+            )
+        except Exception:
+            self._maya_selection_job = None
+
+    def _remove_maya_selection_job(self):
+        if not cmds or self._maya_selection_job is None:
+            return
+        job = self._maya_selection_job
+        self._maya_selection_job = None
+        try:
+            if cmds.scriptJob(exists=job):
+                cmds.scriptJob(kill=job, force=True)
+        except Exception:
+            pass
+
+    def _on_maya_selection_changed(self):
+        # 自分自身の同期処理中・ALL CHECK 中・ダイアログ未構築なら何もしない
+        if (
+            self._syncing_selection
+            or self._suppress_maya_selection_sync
+            or self._all_check_running
+            or not hasattr(self, "object_list")
+        ):
+            return
+        try:
+            sel = cmds.ls(sl=True, long=True) or []
+        except Exception:
+            return
+        if sel:
+            self._set_object_items_selected_from_maya(
+                self._matching_object_items_for_maya_selection(sel)
+            )
+        elif self.object_list.selectedItems():
+            self._set_object_items_selected_from_maya([])
+
+    def _release_maya_selection_sync_suppression(self):
+        self._suppress_maya_selection_sync = False
+
+    def _format_selected_object_details(self, items):
+        """選択数に応じた詳細 HTML を生成。複数選択時はオブジェクトごとに区切り表示。"""
+        if not items:
+            return ""
+        if len(items) == 1:
+            key = items[0].data(QtCore.Qt.UserRole)
+            details = self.object_to_details.get(key, [])
+            return _formatter.format_details_html(details) if details else ""
+
+        parts = [
+            f"<div style='font-family:Consolas,monospace; font-size:11px;"
+            f" color:#3ecfbe; margin-bottom:6px;'>"
+            f"{len(items)} OBJECTS SELECTED</div>",
+            "<div style='font-family:Consolas,monospace; font-size:10px;"
+            " color:#1a3050; margin-bottom:8px;'>────────────────────────────</div>",
+        ]
+        for i, item in enumerate(items):
+            key = item.data(QtCore.Qt.UserRole)
+            display = item.text()
+            details = self.object_to_details.get(key, [])
+            if i > 0:
+                parts.append(
+                    "<div style='font-family:Consolas,monospace; font-size:10px;"
+                    " color:#1a3050; margin:10px 0 8px;'>────────────────────────────</div>"
+                )
+            parts.append(
+                f"<div style='font-weight:bold; color:#3ecfbe;"
+                f" font-size:12px; margin-bottom:6px;'>{html.escape(display)}</div>"
+            )
+            if details:
+                parts.append(_formatter.format_details_html(details))
+        return "".join(parts)
 
     # ----------------------------------------------------------
     # 右パネル
     # ----------------------------------------------------------
-    def on_object_clicked(self, item):
-        if not item:
-            return
-        key = item.data(QtCore.Qt.UserRole)
-        if key:
-            self._apply_maya_selection_for_key(key, self.object_to_details.get(key, []))
-
     def _on_detail_component_clicked(self, comp):
         """詳細ビュー内のコンポーネント文字列がクリックされたら Maya で選択する"""
         if not cmds:
@@ -690,17 +834,27 @@ class assetChecker(QtWidgets.QDialog):
         except Exception:
             pass
 
-    def on_object_selected(self, current, previous):
+    def on_object_selection_changed(self):
+        """object_list の選択が変わったら Maya 選択と詳細表示を更新する"""
+        if self._syncing_selection:
+            return
         self.detail_view.clear()
-        if not current:
+        items = self.object_list.selectedItems()
+        if not items:
             return
-        key = current.data(QtCore.Qt.UserRole)
-        if not key:
-            return
-        details = self.object_to_details.get(key, [])
-        if details:
-            self.detail_view.setHtml(_formatter.format_details_html(details))
-        self._apply_maya_selection_for_key(key, details)
+        details_html = self._format_selected_object_details(items)
+        if details_html:
+            self.detail_view.setHtml(details_html)
+
+        # Qt → Maya 反映の前後でフラグ管理（直後の Maya イベントを抑制）
+        self._suppress_maya_selection_sync = True
+        self._syncing_selection = True
+        try:
+            self._apply_maya_selection_for_items(items)
+        finally:
+            self._syncing_selection = False
+        # SelectionChanged が遅延して飛んでくることがあるので 150ms 抑制
+        QtCore.QTimer.singleShot(150, self._release_maya_selection_sync_suppression)
 
     def _set_object_list_title(self, text):
         """Objects タイトル右側のサブラベル（ツール名 / 進捗）を更新"""
@@ -822,6 +976,7 @@ class assetChecker(QtWidgets.QDialog):
         # ダイアログ消滅時は確実にブロック解除（ALL CHECK 中なら停止フラグも立てる）
         self._cancel_requested = True
         self._remove_input_block()
+        self._remove_maya_selection_job()
         super().closeEvent(event)
 
     # ----------------------------------------------------------
