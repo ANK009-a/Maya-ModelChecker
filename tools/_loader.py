@@ -72,11 +72,12 @@ def _ensure_util_module():
             sys.modules["_util"] = mod
 
 
-def load_and_run(folder, script_name, selection=None):
+def load_and_run(folder, script_name, selection=None, progress_callback=None):
     """スクリプトを取得して exec し、構造化結果または stdout テキストを返す。
-    selection=None  : 呼び出し時点の Maya 選択を使用
-    selection=[]    : シーン全体を対象
-    selection=[...] : 指定オブジェクトのみを対象
+    selection=None         : 呼び出し時点の Maya 選択を使用
+    selection=[]           : シーン全体を対象
+    selection=[...]        : 指定オブジェクトのみを対象
+    progress_callback=fn   : check スクリプト内の `_util.report_progress(msg)` から呼び出される
     """
     _ensure_util_module()
     util_mod = sys.modules.get("_util")
@@ -85,9 +86,12 @@ def load_and_run(folder, script_name, selection=None):
             util_mod._checker_selection = (cmds.ls(sl=True, long=True) or []) if cmds else []
         else:
             util_mod._checker_selection = selection
+        util_mod._progress_callback = progress_callback
 
     code = fetch_script(folder, script_name)
     if code is None:
+        if util_mod:
+            util_mod._progress_callback = None
         return None, ""
 
     ns = {}
@@ -102,5 +106,8 @@ def load_and_run(folder, script_name, selection=None):
             return ns["RESULTS"], ""
     except Exception as e:
         print(f"[assetChecker] 実行エラー: {script_name}\n{e}")
+    finally:
+        if util_mod:
+            util_mod._progress_callback = None
 
     return None, buf.getvalue().strip()

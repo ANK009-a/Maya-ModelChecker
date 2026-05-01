@@ -6,6 +6,7 @@ import time
 import urllib.request
 import types
 import sys
+from collections import deque
 
 import maya.OpenMayaUI as omui
 try:
@@ -21,7 +22,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.19.0"
+LAUNCHER_VERSION    = "1.20.0"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -284,6 +285,8 @@ class assetChecker(QtWidgets.QDialog):
             "QScrollArea { background: transparent; border: none; }"
             " QScrollArea > QWidget > QWidget { background: transparent; }"
         )
+        scroll.verticalScrollBar().rangeChanged.connect(self._update_tool_scrollbar_style)
+        QtCore.QTimer.singleShot(0, self._update_tool_scrollbar_style)
 
         left_inner = QtWidgets.QWidget()
         left_inner.setStyleSheet("background: transparent;")
@@ -335,7 +338,12 @@ class assetChecker(QtWidgets.QDialog):
         self.object_list = QtWidgets.QListWidget()
         self.object_list.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.object_list.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.object_list.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOn)
+        self.object_list.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.object_list.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.object_list.setStyleSheet(_styles.SS_OBJECT_LIST)
+        self.object_list.verticalScrollBar().rangeChanged.connect(self._update_object_scrollbar_style)
+        QtCore.QTimer.singleShot(0, self._update_object_scrollbar_style)
 
         list_lay.addWidget(obj_title_w)
         list_lay.addWidget(self.object_list, 1)
@@ -483,6 +491,7 @@ class assetChecker(QtWidgets.QDialog):
                 row.setVisible(False)
 
         self._update_status_bar()
+        self._update_tool_scrollbar_style()
 
     # ----------------------------------------------------------
     # 起動時の先読みキャッシュ
@@ -834,6 +843,24 @@ class assetChecker(QtWidgets.QDialog):
         except Exception:
             pass
 
+    def _update_tool_scrollbar_style(self, *_):
+        """Tools のスクロールバーは領域は維持し、不要時だけハンドルを透明化"""
+        if not hasattr(self, "left_scroll"):
+            return
+        bar = self.left_scroll.verticalScrollBar()
+        if not bar:
+            return
+        bar.setStyleSheet("" if bar.maximum() > 0 else _styles.SS_OBJECT_SCROLLBAR_HIDDEN)
+
+    def _update_object_scrollbar_style(self, *_):
+        """Objects のスクロールバーは領域は維持し、不要時だけハンドルを透明化"""
+        if not hasattr(self, "object_list"):
+            return
+        bar = self.object_list.verticalScrollBar()
+        if not bar:
+            return
+        bar.setStyleSheet("" if bar.maximum() > 0 else _styles.SS_OBJECT_SCROLLBAR_HIDDEN)
+
     def on_object_selection_changed(self):
         """object_list の選択が変わったら Maya 選択と詳細表示を更新する"""
         if self._syncing_selection:
@@ -872,6 +899,7 @@ class assetChecker(QtWidgets.QDialog):
             item = QtWidgets.QListWidgetItem(display)
             item.setData(QtCore.Qt.UserRole, key)  # 内部キーは long path のまま
             self.object_list.addItem(item)
+        self._update_object_scrollbar_style()
         if self.object_list.count() > 0:
             self.object_list.setCurrentRow(0)
         else:
@@ -1053,16 +1081,42 @@ class assetChecker(QtWidgets.QDialog):
             "text": "",
             "done": False,
             "error": None,
-            "last_cmd": None,            # 直近に整形した cmds 呼び出し
-            "last_format_time": 0.0,     # 整形のスロットル管理
+            "last_cmd": None,                  # 直近に整形した cmds 呼び出し
+            "cmd_history": deque(maxlen=5),    # 直近5件の整形済み呼び出し
+            "cmd_counts": {},                  # 関数名 → 呼び出し回数
+            "cmd_total": 0,                    # 全呼び出し回数（cmds + py 進捗）
+            "last_format_time": 0.0,           # 整形のスロットル管理
+            "progress_last_time": 0.0,         # progress_callback のスロットル管理
         }
-        FORMAT_INTERVAL = 0.030  # 30ms 以内の連続呼び出しは整形をスキップ
+        FORMAT_INTERVAL = 0.030    # 30ms 以内の連続 cmds は整形だけスキップ（カウントは取る）
+        PROGRESS_INTERVAL = 0.150  # ツール側の進捗通知は 150ms 間隔で間引く
+
+        def _record_activity(name, text=None):
+            result_holder["cmd_total"] += 1
+            result_holder["cmd_counts"][name] = result_holder["cmd_counts"].get(name, 0) + 1
+            if text is None:
+                return
+            result_holder["last_cmd"] = text
+            result_holder["cmd_history"].append(text)
+
+        def _record_progress(message):
+            now = time.monotonic()
+            if now - result_holder["progress_last_time"] < PROGRESS_INTERVAL:
+                return
+            result_holder["progress_last_time"] = now
+            text = f"py.{folder}: {message}"
+            _record_activity(f"py.{folder}", text)
 
         def _make_wrapper(name, original, worker_thread):
             # cmds.{name} の呼び出しをワーカースレッド限定で記録するラッパ
             def wrapper(*args, **kwargs):
                 try:
                     if threading.current_thread() is worker_thread:
+                        # カウントは全呼び出しで増やす
+                        result_holder["cmd_total"] += 1
+                        result_holder["cmd_counts"][f"cmds.{name}"] = (
+                            result_holder["cmd_counts"].get(f"cmds.{name}", 0) + 1
+                        )
                         now = time.monotonic()
                         if now - result_holder["last_format_time"] >= FORMAT_INTERVAL:
                             result_holder["last_format_time"] = now
@@ -1082,7 +1136,9 @@ class assetChecker(QtWidgets.QDialog):
                                     parts.append(f"{k}={_truncate(repr(v))}")
                                 except Exception:
                                     parts.append(f"{k}=?")
-                            result_holder["last_cmd"] = f"cmds.{name}({', '.join(parts)})"
+                            text = f"cmds.{name}({', '.join(parts)})"
+                            result_holder["last_cmd"] = text
+                            result_holder["cmd_history"].append(text)
                 except Exception:
                     pass
                 return original(*args, **kwargs)
@@ -1106,7 +1162,10 @@ class assetChecker(QtWidgets.QDialog):
                             pass
                 try:
                     structured, text = _loader.load_and_run(
-                        folder, f"{folder}_check.py", selection=self._all_check_selection
+                        folder,
+                        f"{folder}_check.py",
+                        selection=self._all_check_selection,
+                        progress_callback=_record_progress,
                     )
                     result_holder["structured"] = structured
                     result_holder["text"] = text
@@ -1146,9 +1205,9 @@ class assetChecker(QtWidgets.QDialog):
         QtCore.QTimer.singleShot(0, self._step_all_check)
 
     def _animate_until_done(self, header_label, current, total, title, result_holder):
-        """チェック完了まで実行中の cmds（無ければツール名）を表示しつつ UI を生かす"""
+        """チェック完了まで実行中の cmds・履歴・カウント・idle ヒントを表示しつつ UI を生かす"""
 
-        def _build_html(scan_line):
+        def _build_html(scan_line, history, counts, total_cmds, status_note=""):
             hint = "  キャンセル中..." if self._cancel_requested else "  (ESC でキャンセル)"
             parts = [
                 f"<div style='font-family:Consolas,monospace; font-size:11px;"
@@ -1159,6 +1218,7 @@ class assetChecker(QtWidgets.QDialog):
                 "<div style='font-family:Consolas,monospace; font-size:10px;"
                 " color:#1a3050; margin-bottom:4px;'>────────────────────────────</div>",
             ]
+            # 完了済みツール一覧
             for status, f in self._all_check_summary:
                 color = "#28c880" if status == "OK" else "#e05858"
                 mark  = "✓" if status == "OK" else "✗"
@@ -1172,22 +1232,72 @@ class assetChecker(QtWidgets.QDialog):
                     f"<div style='font-family:Consolas,monospace; font-size:11px;"
                     f" color:{color};'>{mark}  {html.escape(t)}{badge}</div>"
                 )
+            # 現在実行中のスキャン行
             parts.append(
                 f"<div style='font-family:Consolas,monospace; font-size:11px;"
-                f" color:#88b8f0; margin-top:3px;'>▶  {html.escape(scan_line)}</div>"
+                f" color:#88b8f0; margin-top:6px;'>▶  {html.escape(scan_line)}</div>"
             )
+            # アクティビティ統計（履歴があるとき = cmds が呼ばれた後）
+            if total_cmds:
+                parts.append(
+                    f"<div style='font-family:Consolas,monospace; font-size:10px;"
+                    f" color:#3ecfbe; margin-top:6px;'>"
+                    f"capturing activity... total x{total_cmds}</div>"
+                )
+                if counts:
+                    top = sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:3]
+                    summary = "  ".join(f"{n} x{c}" for n, c in top)
+                    parts.append(
+                        f"<div style='font-family:Consolas,monospace; font-size:10px;"
+                        f" color:#5a98c0; margin-top:2px;'>{html.escape(summary)}</div>"
+                    )
+            if status_note:
+                parts.append(
+                    f"<div style='font-family:Consolas,monospace; font-size:10px;"
+                    f" color:#e0b060; margin-top:4px;'>"
+                    f"{html.escape(status_note)}</div>"
+                )
+            if history:
+                parts.append(
+                    "<div style='font-family:Consolas,monospace; font-size:10px;"
+                    " color:#3a6888; margin-top:4px;'>recent activity</div>"
+                )
+                for cmd_text in history:
+                    parts.append(
+                        f"<div style='font-family:Consolas,monospace; font-size:10px;"
+                        f" color:#88b8f0; padding:1px 0;'>·  {html.escape(cmd_text)}</div>"
+                    )
             return "".join(parts)
 
+        last_total_cmds = -1
+        idle_started = time.monotonic()
         # チェック完了まで「実行中の cmds」を表示し続ける（無ければツール名を静的に）
         while not result_holder["done"]:
             last_cmd = result_holder.get("last_cmd")
             display = last_cmd if last_cmd else f"{title}..."
-            self.detail_view.setHtml(_build_html(display + "█"))
+            history = list(result_holder.get("cmd_history", []))
+            counts = dict(result_holder.get("cmd_counts", {}))
+            total_cmds = result_holder.get("cmd_total", 0)
+            # idle 検出: cmds カウンタが進んでいない時間を測る
+            if total_cmds != last_total_cmds:
+                last_total_cmds = total_cmds
+                idle_started = time.monotonic()
+            idle_seconds = time.monotonic() - idle_started
+            status_note = "OpenMaya / Python processing..." if idle_seconds > 0.8 else ""
+
+            self.detail_view.setHtml(_build_html(
+                display + "█", history, counts, total_cmds, status_note
+            ))
             QtWidgets.QApplication.processEvents()
             QtCore.QThread.msleep(35)
 
         # 完了 → 確定状態を即表示
-        self.detail_view.setHtml(_build_html(title + "..."))
+        self.detail_view.setHtml(_build_html(
+            title + "...",
+            list(result_holder.get("cmd_history", [])),
+            dict(result_holder.get("cmd_counts", {})),
+            result_holder.get("cmd_total", 0),
+        ))
         QtWidgets.QApplication.processEvents()
 
     def _finish_all_check(self):

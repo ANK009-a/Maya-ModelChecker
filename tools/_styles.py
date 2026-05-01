@@ -57,6 +57,27 @@ QToolTip {
 
 
 # ============================================================
+# スクロールバー: スクロール不要時に視覚的に隠す
+# （setStyleSheet で動的に切り替えて、領域は維持しつつ手元だけ透明に）
+# ============================================================
+SS_OBJECT_SCROLLBAR_HIDDEN = """
+QScrollBar:vertical {
+    background: transparent;
+    width: 8px;
+    margin: 8px 3px 8px 0;
+}
+QScrollBar::handle:vertical {
+    background: transparent;
+    min-height: 20px;
+    border-radius: 4px;
+}
+QScrollBar::handle:vertical:hover { background: transparent; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }
+"""
+
+
+# ============================================================
 # ツールボタン: 状態別（未チェック / OK / エラー）
 # ============================================================
 SS_BTN_UNCHECKED = """
