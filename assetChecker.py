@@ -21,7 +21,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.16.1"
+LAUNCHER_VERSION    = "1.17.0"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -217,12 +217,30 @@ class assetChecker(QtWidgets.QDialog):
         left_container_lay.setContentsMargins(0, 0, 0, 0)
         left_container_lay.setSpacing(6)
 
-        # 上部: CHECK / ALL CHECK ボタン（枠外）
-        top_btn_w = QtWidgets.QWidget()
-        top_btn_w.setStyleSheet("background: transparent;")
-        top_btn_lay = QtWidgets.QHBoxLayout(top_btn_w)
-        top_btn_lay.setContentsMargins(0, 0, 0, 0)
-        top_btn_lay.setSpacing(6)
+        # 上部: "Tools" タイトル + キャッシュ状況（右パネルの "Objects" と同じ枠外配置）
+        tools_title_w = QtWidgets.QWidget()
+        tools_title_w.setStyleSheet("background: transparent;")
+        tools_title_w.setFixedHeight(TOP_BAR_H)
+        tools_title_lay = QtWidgets.QHBoxLayout(tools_title_w)
+        tools_title_lay.setContentsMargins(8, 0, 8, 0)
+        tools_title_lay.setSpacing(6)
+
+        tools_title_main = QtWidgets.QLabel("Tools")
+        tools_title_main.setStyleSheet(_styles.SS_PANEL_TITLE_MAIN)
+
+        self._cache_status_label = QtWidgets.QLabel("")
+        self._cache_status_label.setStyleSheet("background: transparent;")
+        self._cache_status_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+
+        tools_title_lay.addWidget(tools_title_main)
+        tools_title_lay.addWidget(self._cache_status_label, 1)
+
+        # 下部: CHECK / ALL CHECK ボタン
+        bottom_btn_w = QtWidgets.QWidget()
+        bottom_btn_w.setStyleSheet("background: transparent;")
+        bottom_btn_lay = QtWidgets.QHBoxLayout(bottom_btn_w)
+        bottom_btn_lay.setContentsMargins(0, 0, 0, 0)
+        bottom_btn_lay.setSpacing(6)
 
         self.check_btn = QtWidgets.QPushButton("CHECK")
         self.check_btn.setFixedHeight(TOP_BAR_H)
@@ -238,8 +256,8 @@ class assetChecker(QtWidgets.QDialog):
         self.all_check_btn.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
         self.all_check_btn.setMinimumWidth(1)
 
-        top_btn_lay.addWidget(self.check_btn)
-        top_btn_lay.addWidget(self.all_check_btn)
+        bottom_btn_lay.addWidget(self.check_btn)
+        bottom_btn_lay.addWidget(self.all_check_btn)
 
         # 左パネル本体（角丸枠 + ツール一覧）
         left_panel = QtWidgets.QFrame()
@@ -269,8 +287,9 @@ class assetChecker(QtWidgets.QDialog):
         self.left_inner  = left_inner
         left_lay.addWidget(scroll, 1)
 
-        left_container_lay.addWidget(top_btn_w)
+        left_container_lay.addWidget(tools_title_w)
         left_container_lay.addWidget(left_panel, 1)
+        left_container_lay.addWidget(bottom_btn_w)
 
         body_lay.addWidget(left_container)
 
@@ -356,8 +375,7 @@ class assetChecker(QtWidgets.QDialog):
         status.setStyleSheet(_styles.SS_STATUS_BAR)
         status.setFixedHeight(30)
         status_lay = QtWidgets.QHBoxLayout(status)
-        # 上枠線(1px) と font の縦メトリクス分のオフセットを補正するため上下を非対称に
-        status_lay.setContentsMargins(16, 3, 16, 7)
+        status_lay.setContentsMargins(16, 5, 16, 5)
         status_lay.setSpacing(20)
 
         _lbl_ss = "font-size: 11px; background: transparent;"
@@ -371,12 +389,6 @@ class assetChecker(QtWidgets.QDialog):
             lbl.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignLeft)
             status_lay.addWidget(lbl)
         status_lay.addStretch()
-
-        # キャッシュ状況ラベル（取得中はテキスト + アイコン、完了後はドットのみ）
-        self._cache_status_label = QtWidgets.QLabel("")
-        self._cache_status_label.setStyleSheet("background: transparent;")
-        self._cache_status_label.setAlignment(QtCore.Qt.AlignVCenter | QtCore.Qt.AlignRight)
-        status_lay.addWidget(self._cache_status_label)
 
         ver_lbl = QtWidgets.QLabel(f"v{LAUNCHER_VERSION}")
         ver_lbl.setStyleSheet("color: #263c58; font-size: 10px; background: transparent;")
@@ -423,6 +435,7 @@ class assetChecker(QtWidgets.QDialog):
             # ツール 1 行（ボタン + FIX）を QWidget で包む（折り畳み制御のため）
             row_w = QtWidgets.QWidget()
             row_w.setStyleSheet("background: transparent;")
+            row_w.setFixedHeight(BTN_H)
             row_lay = QtWidgets.QHBoxLayout(row_w)
             row_lay.setSpacing(4)
             row_lay.setContentsMargins(0, 0, 0, 0)
@@ -441,8 +454,8 @@ class assetChecker(QtWidgets.QDialog):
 
             # FIX ボタン（has_fix=true のツール・エラー時のみ表示）
             fix_btn = QtWidgets.QPushButton("FIX")
-            fix_btn.setFixedWidth(FIX_W)
-            fix_btn.setFixedHeight(BTN_H)
+            fix_btn.setFixedSize(FIX_W, BTN_H)
+            fix_btn.setSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
             fix_btn.setStyleSheet(_styles.SS_BTN_FIX)
             fix_btn.setVisible(False)
             fix_btn.clicked.connect(lambda *_, f=folder: self._run_fix(f))
