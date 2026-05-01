@@ -22,12 +22,12 @@ QDialog#assetChecker {
 QScrollBar:vertical {
     background: transparent;
     width: 8px;
-    margin: 2px;
+    margin: 8px 3px 8px 0;
 }
 QScrollBar::handle:vertical {
     background: #1a3050;
     min-height: 20px;
-    border-radius: 3px;
+    border-radius: 4px;
 }
 QScrollBar::handle:vertical:hover { background: #244068; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
@@ -35,12 +35,12 @@ QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none;
 QScrollBar:horizontal {
     background: transparent;
     height: 8px;
-    margin: 2px;
+    margin: 0 8px 3px 8px;
 }
 QScrollBar::handle:horizontal {
     background: #1a3050;
     min-width: 20px;
-    border-radius: 3px;
+    border-radius: 4px;
 }
 QScrollBar::handle:horizontal:hover { background: #244068; }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
@@ -189,18 +189,18 @@ QListWidget {
     border: 1px solid #1a2e4a;
     border-radius: 8px;
     outline: none;
-    padding: 4px 0;
+    padding: 0;
     font-size: 12px;
 }
 QListWidget::item {
-    padding: 7px 14px;
-    border-left: 3px solid transparent;
+    margin: 4px 4px;
+    padding: 7px 10px;
+    border-radius: 4px;
 }
 QListWidget::item:hover { background-color: #0f1e34; }
 QListWidget::item:selected {
     background-color: #142440;
     color: #3ecfbe;
-    border-left: 3px solid #3ecfbe;
 }
 """
 
@@ -210,7 +210,7 @@ QTextEdit {
     color: #b8d4ee;
     border: 1px solid #1a2e4a;
     border-radius: 8px;
-    padding: 12px 14px;
+    padding: 0;
     font-family: Consolas, "Courier New", monospace;
     font-size: 12px;
     selection-background-color: #142440;

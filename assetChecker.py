@@ -22,7 +22,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.20.0"
+LAUNCHER_VERSION    = "1.21.0"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -226,12 +226,13 @@ class assetChecker(QtWidgets.QDialog):
         left_container_lay.setContentsMargins(0, 0, 0, 0)
         left_container_lay.setSpacing(6)
 
-        # 上部: "Tools" タイトル + キャッシュ状況（右パネルの "Objects" と同じ枠外配置）
+        # 上部: "Tools" タイトル + キャッシュ状況 + CHECK / ALL CHECK ボタン
+        # 1段にまとめて縦スペースを節約。アクションを右、状態を中央寄せに。
         tools_title_w = QtWidgets.QWidget()
         tools_title_w.setStyleSheet("background: transparent;")
         tools_title_w.setFixedHeight(TOP_BAR_H)
         tools_title_lay = QtWidgets.QHBoxLayout(tools_title_w)
-        tools_title_lay.setContentsMargins(8, 0, 8, 0)
+        tools_title_lay.setContentsMargins(8, 0, 0, 0)
         tools_title_lay.setSpacing(6)
 
         tools_title_main = QtWidgets.QLabel("Tools")
@@ -239,34 +240,41 @@ class assetChecker(QtWidgets.QDialog):
 
         self._cache_status_label = QtWidgets.QLabel("")
         self._cache_status_label.setStyleSheet("background: transparent;")
-        self._cache_status_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        self._cache_status_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
 
-        tools_title_lay.addWidget(tools_title_main)
-        tools_title_lay.addWidget(self._cache_status_label, 1)
-
-        # 下部: CHECK / ALL CHECK ボタン
-        bottom_btn_w = QtWidgets.QWidget()
-        bottom_btn_w.setStyleSheet("background: transparent;")
-        bottom_btn_lay = QtWidgets.QHBoxLayout(bottom_btn_w)
-        bottom_btn_lay.setContentsMargins(0, 0, 0, 0)
-        bottom_btn_lay.setSpacing(6)
+        # コンパクトな CHECK / ALL CHECK ボタン（タイトルバー右端に配置）
+        _btn_check_ss = (
+            "QPushButton { background:#0d2e2a; color:#3ecfbe; border:1px solid #2fb7a8;"
+            " border-radius:4px; font-size:10px; font-weight:600; padding:0 6px; outline:none; }"
+            "QPushButton:hover { background:#103a35; border-color:#3ecfbe; }"
+            "QPushButton:pressed { background:#08231f; }"
+            "QPushButton:disabled { color:#32645f; border-color:#1d554f; background:#0a211f; }"
+        )
+        _btn_all_ss = (
+            "QPushButton { background:#0a1e38; color:#88b8f0; border:1px solid #236aa8;"
+            " border-radius:4px; font-size:10px; font-weight:600; padding:0 6px; outline:none; }"
+            "QPushButton:hover { background:#0d2848; border-color:#2878d0; }"
+            "QPushButton:pressed { background:#07162a; }"
+            "QPushButton:disabled { color:#385a78; border-color:#174063; background:#09182a; }"
+        )
 
         self.check_btn = QtWidgets.QPushButton("CHECK")
-        self.check_btn.setFixedHeight(TOP_BAR_H)
-        self.check_btn.setStyleSheet(_styles.SS_BTN_CHECK)
+        self.check_btn.setFixedSize(50, 22)
+        self.check_btn.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.check_btn.setStyleSheet(_btn_check_ss)
         self.check_btn.clicked.connect(self.start_check)
-        self.check_btn.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
-        self.check_btn.setMinimumWidth(1)
 
         self.all_check_btn = QtWidgets.QPushButton("ALL CHECK")
-        self.all_check_btn.setFixedHeight(TOP_BAR_H)
-        self.all_check_btn.setStyleSheet(_styles.SS_BTN_ALL)
+        self.all_check_btn.setFixedSize(72, 22)
+        self.all_check_btn.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.all_check_btn.setStyleSheet(_btn_all_ss)
         self.all_check_btn.clicked.connect(self.start_all_check)
-        self.all_check_btn.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
-        self.all_check_btn.setMinimumWidth(1)
 
-        bottom_btn_lay.addWidget(self.check_btn)
-        bottom_btn_lay.addWidget(self.all_check_btn)
+        tools_title_lay.addWidget(tools_title_main, 0)
+        tools_title_lay.addWidget(self._cache_status_label, 0)
+        tools_title_lay.addStretch(1)
+        tools_title_lay.addWidget(self.check_btn, 0)
+        tools_title_lay.addWidget(self.all_check_btn, 0)
 
         # 左パネル本体（角丸枠 + ツール一覧）
         left_panel = QtWidgets.QFrame()
@@ -300,7 +308,6 @@ class assetChecker(QtWidgets.QDialog):
 
         left_container_lay.addWidget(tools_title_w)
         left_container_lay.addWidget(left_panel, 1)
-        left_container_lay.addWidget(bottom_btn_w)
 
         body_lay.addWidget(left_container)
 
@@ -369,6 +376,9 @@ class assetChecker(QtWidgets.QDialog):
         self.detail_view = _widgets.ComponentTextEdit()
         self.detail_view.setReadOnly(True)
         self.detail_view.setFrameShape(QtWidgets.QFrame.NoFrame)
+        # padding は SS で 0 にし、本文余白は documentMargin で持たせる
+        # → スクロールバーが余白の中ではなく端に張り付く
+        self.detail_view.document().setDocumentMargin(12)
         self.detail_view.setStyleSheet(_styles.SS_DETAIL_VIEW)
         self.detail_view.componentClicked.connect(self._on_detail_component_clicked)
 
