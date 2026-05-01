@@ -21,7 +21,7 @@ from shiboken2 import wrapInstance
 # ============================================================
 GITHUB_RAW          = "https://raw.githubusercontent.com/ANK009-a/Maya-ModelChecker/main"
 WINDOW_OBJECT_NAME  = "assetChecker"
-LAUNCHER_VERSION    = "1.17.0"
+LAUNCHER_VERSION    = "1.18.0"
 LEFT_PANEL_W = 204  # 左パネル全体の幅
 BTN_H        = 28   # ツールボタンの高さ
 TOP_BAR_H    = 26   # 枠外トップバーの高さ（CHECK/ALL CHECK / object_list_title / Info）
@@ -181,12 +181,14 @@ class assetChecker(QtWidgets.QDialog):
         self._tooltip_filter = _widgets.InstantTooltipFilter(self)
 
         # ALL CHECK / CHECK 実行フラグ
-        self._all_check_running   = False
-        self._all_check_index     = 0
-        self._all_check_summary   = []
-        self._all_check_selection = []   # [] = 全体, [...] = 選択範囲
-        self._cancel_requested    = False
-        self._input_blocker       = None
+        self._all_check_running    = False
+        self._all_check_index      = 0
+        self._all_check_summary    = []
+        self._all_check_selection  = []   # [] = 全体, [...] = 選択範囲
+        self._active_check_folders = []   # 現在実行中のフォルダ列（カテゴリ単位 CHECK 用）
+        self._active_check_label   = ""   # 表示用ラベル（"ALL CHECK" / "Transform 系 CHECK" 等）
+        self._cancel_requested     = False
+        self._input_blocker        = None
 
         self._prefetch_progress.connect(self._on_prefetch_progress)
 
@@ -429,6 +431,7 @@ class assetChecker(QtWidgets.QDialog):
                 last_cat = cat
                 header = _widgets.CategoryHeader(cat)
                 header.clicked.connect(lambda c=cat: self._toggle_category(c))
+                header.refreshClicked.connect(lambda c=cat: self.start_category_check(c))
                 self.rows_layout.addWidget(header)
                 self._category_widgets[cat] = {"header": header, "rows": [], "folders": []}
 
@@ -824,6 +827,28 @@ class assetChecker(QtWidgets.QDialog):
     # ----------------------------------------------------------
     # ALL CHECK / CHECK
     # ----------------------------------------------------------
+    def _begin_check_sequence(self, folders, selection, label):
+        """CHECK / ALL CHECK / カテゴリ CHECK の共通起動処理"""
+        if self._all_check_running:
+            return False
+        folders = list(folders)
+        if not folders:
+            return False
+        self._all_check_running    = True
+        self._all_check_index      = 0
+        self._all_check_summary    = []
+        self._all_check_selection  = selection
+        self._active_check_folders = folders
+        self._active_check_label   = label
+        self._cancel_requested     = False
+        self._set_busy(True)
+        self._install_input_block()
+        self._set_object_list_title(label)
+        self.set_object_results({})
+        self.detail_view.setPlainText(f"{label} 実行中...")
+        QtCore.QTimer.singleShot(0, self._step_all_check)
+        return True
+
     def start_check(self):
         """選択オブジェクトのみを対象に全ツールをチェック"""
         if self._all_check_running:
@@ -832,45 +857,40 @@ class assetChecker(QtWidgets.QDialog):
         if not sel:
             self.detail_view.setPlainText("オブジェクトを選択してください")
             return
-        self._all_check_running   = True
-        self._all_check_index     = 0
-        self._all_check_summary   = []
-        self._all_check_selection = sel
-        self._cancel_requested    = False
-        self._set_busy(True)
-        self._install_input_block()
-        self._set_object_list_title("CHECK")
-        self.set_object_results({})
-        self.detail_view.setPlainText("CHECK 実行中...")
-        QtCore.QTimer.singleShot(0, self._step_all_check)
+        self._begin_check_sequence(self.folders, sel, "CHECK")
 
     def start_all_check(self):
         if self._all_check_running:
             return
-        self._all_check_running   = True
-        self._all_check_index     = 0
-        self._all_check_summary   = []
-        self._all_check_selection = []   # 空リスト = シーン全体
-        self._cancel_requested    = False
-        self._set_busy(True)
-        self._install_input_block()
-        self._set_object_list_title("ALL CHECK")
-        self.set_object_results({})
-        self.detail_view.setPlainText("ALL CHECK 実行中...")
-        QtCore.QTimer.singleShot(0, self._step_all_check)
+        self._begin_check_sequence(self.folders, [], "ALL CHECK")
+
+    def start_category_check(self, cat):
+        """カテゴリ内ツールだけを対象にチェック。選択があれば選択範囲、なければ全体。"""
+        if self._all_check_running:
+            return
+        info = self._category_widgets.get(cat)
+        if not info:
+            return
+        sel = (cmds.ls(sl=True, long=True) or []) if cmds else []
+        label = f"{cat} CHECK" if sel else f"{cat} ALL CHECK"
+        self._begin_check_sequence(info.get("folders", []), sel if sel else [], label)
 
     def _step_all_check(self):
         # ダイアログ消滅後に singleShot が遅れて発火した場合は何もしない
         if not self.isVisible():
             return
-        if self._cancel_requested or self._all_check_index >= len(self.folders):
+        active_folders = self._active_check_folders or self.folders
+        if self._cancel_requested or self._all_check_index >= len(active_folders):
             self._finish_all_check()
             return
-        folder  = self.folders[self._all_check_index]
+        folder  = active_folders[self._all_check_index]
         title   = self._folder_titles.get(folder, folder)
-        total   = len(self.folders)
+        total   = len(active_folders)
         current = self._all_check_index + 1
-        header_label = "CHECK" if self._all_check_selection else "ALL CHECK"
+        header_label = (
+            self._active_check_label
+            or ("CHECK" if self._all_check_selection else "ALL CHECK")
+        )
 
         # チェック結果と完了フラグを共有する箱
         result_holder = {
@@ -1020,10 +1040,15 @@ class assetChecker(QtWidgets.QDialog):
         self._remove_input_block()
         cancelled = self._cancel_requested
         self._cancel_requested = False
+        active_label = self._active_check_label
+        self._active_check_folders = []
+        self._active_check_label = ""
         self._set_busy(False)
         if not self.isVisible():
             return
-        header_label = "CHECK" if self._all_check_selection else "ALL CHECK"
+        header_label = active_label or (
+            "CHECK" if self._all_check_selection else "ALL CHECK"
+        )
         if cancelled:
             header_label += " (CANCELLED)"
 
@@ -1079,6 +1104,11 @@ class assetChecker(QtWidgets.QDialog):
 
         for btn in self._check_btns.values():
             btn.setEnabled(not busy)
+        # カテゴリ単位 CHECK ボタン（↻）も一緒に制御
+        for info in getattr(self, "_category_widgets", {}).values():
+            header = info.get("header")
+            if hasattr(header, "setRefreshEnabled"):
+                header.setRefreshEnabled(not busy)
         for f, fix_btn in self._fix_btns.items():
             if busy:
                 fix_btn.setEnabled(False)
@@ -1097,6 +1127,11 @@ class assetChecker(QtWidgets.QDialog):
 # ============================================================
 # 起動
 # ============================================================
-close_existing_ui()
-ui = assetChecker()
-ui.show()
+def show_asset_checker():
+    close_existing_ui()
+    new_ui = assetChecker()
+    new_ui.show()
+    return new_ui
+
+
+ui = show_asset_checker()

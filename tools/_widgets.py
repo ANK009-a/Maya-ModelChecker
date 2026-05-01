@@ -300,6 +300,7 @@ class ToolButton(DoubleClickButton):
 class CategoryHeader(QtWidgets.QWidget):
     """カテゴリ名・矢印・件数バッジを表示するクリック可能ヘッダー"""
     clicked = QtCore.Signal()
+    refreshClicked = QtCore.Signal()  # ↻ ボタン専用クリック
 
     def __init__(self, name, parent=None):
         super().__init__(parent)
@@ -328,6 +329,29 @@ class CategoryHeader(QtWidgets.QWidget):
         )
         self._name_lbl.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
 
+        # カテゴリ単位 CHECK ボタン（クリックは refreshClicked として独立して emit）
+        self._refresh_btn = QtWidgets.QPushButton("↻")
+        self._refresh_btn.setObjectName("catRefreshButton")
+        self._refresh_btn.setFixedSize(18, 18)
+        self._refresh_btn.setCursor(QtCore.Qt.PointingHandCursor)
+        self._refresh_btn.setFocusPolicy(QtCore.Qt.NoFocus)
+        self._refresh_btn.setToolTip("このカテゴリをチェック")
+        self._refresh_btn.setStyleSheet(
+            "QPushButton#catRefreshButton {"
+            " background: transparent; border: 1px solid transparent;"
+            " border-radius: 4px; color: #3a6888; font-size: 12px;"
+            " padding: 0px;"
+            "}"
+            "QPushButton#catRefreshButton:hover {"
+            " background: #0f1e34; border-color: #1a2e4a;"
+            " color: #3ecfbe;"
+            "}"
+            "QPushButton#catRefreshButton:disabled {"
+            " color: #263c58; background: transparent; border-color: transparent;"
+            "}"
+        )
+        self._refresh_btn.clicked.connect(self.refreshClicked.emit)
+
         self._badge_lbl = QtWidgets.QLabel("")
         self._badge_lbl.setStyleSheet(
             "background: #3a1010; color: #e05858; border-radius: 3px;"
@@ -338,7 +362,11 @@ class CategoryHeader(QtWidgets.QWidget):
 
         lay.addWidget(self._arrow_lbl, 0)
         lay.addWidget(self._name_lbl, 1)
+        lay.addWidget(self._refresh_btn, 0)
         lay.addWidget(self._badge_lbl, 0)
+
+    def setRefreshEnabled(self, enabled):
+        self._refresh_btn.setEnabled(enabled)
 
     def mousePressEvent(self, event):
         if event.button() == QtCore.Qt.LeftButton:
